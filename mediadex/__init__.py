@@ -16,43 +16,85 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from elasticsearch_dsl import Document, InnerDoc, Date, Integer, Keyword, Text, Nested
+from elasticsearch_dsl import Document, InnerDoc, Date, Integer, Keyword, Text, Nested, Object, Float
 
 
 class _Index:
     settings = {
-        'number_of_shards': 2,
-        'number_of_replicas': 2,
+        'number_of_shards': 1,
+        'number_of_replicas': 0,
     }
 
 
-class _Info(InnerDoc):
-    pass
+class StreamCounts(InnerDoc):
+    audio_stream_count: Integer()
+    text_stream_count: Integer()
+    video_stream_count: Integer()
 
 
 class Media(Document):
     title = Text()
     year = Integer()
-    info = Nested(_Info)
     genre = Keyword()
+    stream_counts = Object(StreamCounts)
+    container = Keyword()
 
     class Index(_Index):
         name = 'media'
+
+
+class AudioStream(InnerDoc):
+    codec = Keyword()
+    channels = Integer()
+    bit_rate = Integer()
+    duration = Float()
+    language = Keyword()
+
+
+class TextStream(InnerDoc):
+    codec = Keyword()
+    duration = Float()
+    language = Keyword()
+
+
+class VideoStream(InnerDoc):
+    codec = Keyword()
+    bit_rate = Integer()
+    bit_depth = Integer()
+    duration = Float()
+    language = Keyword()
+    resolution = Keyword()
 
 
 class Song(Media):
     artist = Text()
     album = Text()
 
+    audio_stream = Object(AudioStream)
+
     class Index(_Index):
         name = 'music'
 
 
-class Movie(Media):
+class Cinema(Media):
+    director = Keyword()
+    cast = Keyword(multi=True)
+
+    audio_streams = Object(AudioStream, multi=True)
+    text_streams = Object(TextStream, multi=True)
+    video_streams = Object(VideoStream, multi=True)
+
+    class Index(_Index):
+        name = 'cinema'
+
+
+class Movie(Cinema):
     class Index(_Index):
         name = 'movies'
 
 
-class Show(Media):
+class Show(Cinema):
+    season = Integer()
+
     class Index(_Index):
         name = 'series'

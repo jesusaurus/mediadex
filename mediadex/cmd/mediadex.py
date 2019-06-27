@@ -20,10 +20,12 @@ import argparse
 import os
 import yaml
 
+from mediadex.indexer import Indexer
+
 from pymediainfo import MediaInfo
 
 
-class App:
+class Scanner:
     def __init__(self):
         self.args = None
 
@@ -34,29 +36,33 @@ class App:
 
         self.args = parser.parse_args()
 
-    def index(self, data):
-        pass
+    def get_info(self, f):
+        info = MediaInfo.parse(f).to_data()
 
-    def parse(self, f):
-        try:
-            info = MediaInfo.parse(f)
+        if self.args.dry_run:
+            print(yaml.dump(info))
 
-            if self.args.dry_run:
-                print(yaml.dump(info.to_data()))
-            else:
-                index(info)
-        except Exception as exc:
-            raise exc
+        else:
+            try:
+                dex = Indexer()
+                dex.populate(info['tracks'])
+                dex.index()
+            except Exception as exc:
+                print(exc)
+                print(yaml.dump(info))
 
-    def scan(self):
+    def walk(self):
         if self.args and 'path' in self.args:
             for (_top, _dirs, _files) in os.walk(self.args.path):
                 for _file in _files:
-                    full = os.path.join(_top, _file)
-                    self.parse(full)
+                    fp = os.path.join(_top, _file)
+                    try:
+                        self.get_info(fp)
+                    except FileNotFoundError as exc:
+                        pass  # probably a bad symlink
 
 
 def main():
-    app = App()
+    app = Scanner()
     app.parse_args()
-    app.scan()
+    app.walk()
