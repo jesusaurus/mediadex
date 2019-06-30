@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from elasticsearch_dsl import Document, InnerDoc, Integer, Keyword, Text, Object, Float
+from elasticsearch_dsl import Document, Float, InnerDoc, Integer, Keyword, Object, Text
 
 
 class _Index:

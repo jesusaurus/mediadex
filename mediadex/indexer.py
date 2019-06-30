@@ -16,16 +16,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import yaml
 from elasticsearch import NotFoundError
 from elasticsearch_dsl import connections, Search
 
-import yaml
-
-from mediadex import Song, AudioStream, Movie, StreamCounts, VideoStream, TextStream
+from mediadex import AudioStream, Movie, Song, StreamCounts, TextStream, VideoStream
 
 
 class Indexer:
-    def __init__(self, data):
+    def __init__(self):
+        connections.create_connection(hosts=['localhost'], timeout=5)
+        Song.init()
+        Movie.init()
+
+    def build(self, data):
         gen = [ t for t in data if t['track_type'] == 'General' ]
         if len(gen) > 1:
             raise Exception("More than one General track found")
@@ -52,11 +56,6 @@ class Indexer:
         else:
             print("v/t/a count: {}/{}/{}".format(vcount, tcount, acount))
             raise Exception("Unknown media type")
-
-        connections.create_connection(hosts=['localhost'], timeout=5)
-        Song.init()
-        Movie.init()
-
 
     def index(self):
         filename = self.general['complete_name']
@@ -99,6 +98,7 @@ class Indexer:
     def index_song(self, song=None):
         if song is None:
             song = Song()
+        stream_counts = StreamCounts()
 
         song_track = self.audio_tracks.pop()
         stream = AudioStream()
@@ -122,6 +122,10 @@ class Indexer:
 
         song.audio_stream = stream
         song.filename = self.general['complete_name']
+
+        stream_counts.audio_stream_count = 1
+        stream_counts.video_stream_count = 0
+        stream_counts.text_stream_count = 0
 
         song.save()
 
