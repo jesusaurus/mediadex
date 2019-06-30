@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from elasticsearch_dsl import Document, InnerDoc, Date, Integer, Keyword, Text, Nested, Object, Float
+from elasticsearch_dsl import Document, InnerDoc, Integer, Keyword, Text, Object, Float
 
 
 class _Index:
@@ -33,42 +33,42 @@ class StreamCounts(InnerDoc):
 
 
 class Media(Document):
-    title = Text()
+    title = Keyword()
     year = Integer()
     genre = Keyword()
     stream_counts = Object(StreamCounts)
     container = Keyword()
-
-    class Index(_Index):
-        name = 'media'
+    filename = Keyword()
 
 
-class AudioStream(InnerDoc):
+class Stream(InnerDoc):
     codec = Keyword()
+    duration = Float()
+    language = Text()
+    mime_type = Keyword()
+
+
+class TextStream(Stream):
+    pass
+
+
+class AudioStream(Stream):
     channels = Integer()
     bit_rate = Integer()
-    duration = Float()
-    language = Keyword()
+    sample_rate = Integer()
 
 
-class TextStream(InnerDoc):
-    codec = Keyword()
-    duration = Float()
-    language = Keyword()
-
-
-class VideoStream(InnerDoc):
-    codec = Keyword()
+class VideoStream(Stream):
     bit_rate = Integer()
     bit_depth = Integer()
-    duration = Float()
-    language = Keyword()
     resolution = Keyword()
+    height = Integer()
+    width = Integer()
 
 
 class Song(Media):
-    artist = Text()
-    album = Text()
+    artist = Keyword()
+    album = Keyword()
 
     audio_stream = Object(AudioStream)
 
@@ -83,9 +83,6 @@ class Cinema(Media):
     audio_streams = Object(AudioStream, multi=True)
     text_streams = Object(TextStream, multi=True)
     video_streams = Object(VideoStream, multi=True)
-
-    class Index(_Index):
-        name = 'cinema'
 
 
 class Movie(Cinema):

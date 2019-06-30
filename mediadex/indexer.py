@@ -16,25 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from elasticsearch import NotFoundError
+from elasticsearch_dsl import connections, Search
+
+import yaml
 
 from mediadex import Song, AudioStream, Movie, StreamCounts, VideoStream, TextStream
 
-from elasticsearch_dsl import connections
-import yaml
-
 
 class Indexer:
-    def __init__(self):
-        self.dex_type = None
-        self.general = {}
-        self.audio_tracks = []
-        self.text_tracks = []
-        self.video_tracks = []
-        self.other_tracks = []
-
-        connections.create_connection(hosts=['localhost'], timeout=5)
-
-    def populate(self, data):
+    def __init__(self, data):
         gen = [ t for t in data if t['track_type'] == 'General' ]
         if len(gen) > 1:
             raise Exception("More than one General track found")
@@ -62,57 +53,103 @@ class Indexer:
             print("v/t/a count: {}/{}/{}".format(vcount, tcount, acount))
             raise Exception("Unknown media type")
 
+        connections.create_connection(hosts=['localhost'], timeout=5)
+        Song.init()
+        Movie.init()
+
 
     def index(self):
+        filename = self.general['complete_name']
+
         if self.dex_type is None:
             raise Exception("Media type unset")
 
         elif self.dex_type is 'song':
-            self.index_song()
+            s = Song.search()
+            r = s.query('match', filename=filename).execute()
+
+            if r.hits.total.value == 0:
+                self.index_song()
+                print("Indexed new record for {}".format(filename))
+            elif r.hits.total.value == 1:
+                song = r.hits[0]
+                self.index_song(song)
+                print("Updated an existing record for {}".format(song.filename))
+            else:
+                print("Found {} existing records for {}".format(r.hits.total.value, filename))
+                for h in r.hits:
+                    print(h.filename)
 
         elif self.dex_type is 'movie':
-            self.index_movie()
+            s = Movie.search()
+            r = s.query('match', filename=filename).execute()
 
-    def index_song(self):
+            if r.hits.total.value == 0:
+                self.index_movie()
+                print("Indexed new record for {}".format(filename))
+            elif r.hits.total.value == 1:
+                movie = r.hits[0]
+                self.index_movie(movie)
+                print("Updated an existing record for {}".format(filename))
+            else:
+                print("Found {} existing records for {}".format(r.hits.total.value, filename))
+                print(r.hits[0])
+                print(r.hits[1])
+
+    def index_song(self, song=None):
+        if song is None:
+            song = Song()
+
         song_track = self.audio_tracks.pop()
-        song = Song()
         stream = AudioStream()
 
-        stream.codec = song_track.format
-        stream.channels = song_track.channel_s
-        stream.bit_rate = song_track.bit_rate
-        stream.language = song_track.language
-        stream.duration = song_track.duration
+        if 'format_profile' in song_track:
+            stream.codec = "{0} {1}".format(song_track['format'], song_track['format_profile'])
+        else:
+            stream.codec = song_track.format
+        if 'channel_s' in song_track:
+            stream.channels = song_track['channel_s']
+        if 'bit_rate' in song_track:
+            stream.bit_rate = song_track['bit_rate']
+        if 'language' in song_track:
+            stream.language = song_track['language']
+        if 'duration' in song_track:
+            stream.duration = song_track['duration']
+        if 'sampling_rate' in song_track:
+            stream.sample_rate = song_track['sampling_rate']
+        if 'internet_media_type' in song_track:
+            stream.mime_type = song_track['internet_media_type']
 
         song.audio_stream = stream
-        song.title = self.general['complete_name']  # file name
+        song.filename = self.general['complete_name']
 
         song.save()
 
-    def index_movie(self):
-        movie = Movie()
+    def index_movie(self, movie=None):
+        if movie is None:
+            movie = Movie()
         stream_counts = StreamCounts()
 
         vstreams = []
         for track in self.video_tracks:
-            try:
-                stream = VideoStream()
-                if 'codec_id' in track:
-                    stream.codec = track['codec_id']
-                if 'bit_rate' in track:
-                    stream.bit_rate = track['bit_rate']
-                if 'bit_depth' in track:
-                    stream.bit_depth = track['bit_depth']
-                if 'duration' in track:
-                    stream.duration = track['duration']
-                if 'language' in track:
-                    stream.language = track['language']
-                if 'height' in track and 'width' in track:
-                    stream.resolution = "{0}x{1}".format(track['width'], track['height'])
-                vstreams.append(stream)
-            except Exception as exc:
-                print(yaml.dump(track))
-                print("Could not process VideoStream")
+            stream = VideoStream()
+            if 'codec_id' in track:
+                stream.codec = track['codec_id']
+            if 'bit_rate' in track:
+                stream.bit_rate = track['bit_rate']
+            if 'bit_depth' in track:
+                stream.bit_depth = track['bit_depth']
+            if 'duration' in track:
+                stream.duration = track['duration']
+            if 'language' in track:
+                stream.language = track['language']
+            if 'height' in track and 'width' in track:
+                stream.resolution = "{0}x{1}".format(track['width'], track['height'])
+                stream.height = track['height']
+                stream.width = track['width']
+            if 'internet_media_type' in track:
+                stream.mime_type = track['internet_media_type']
+            vstreams.append(stream)
         movie.video_streams = vstreams
         stream_counts.video_stream_count = len(vstreams)
         print("Processed {} video streams".format(len(vstreams)))
@@ -126,6 +163,8 @@ class Indexer:
                 stream.duration = track['duration']
             if 'language' in track:
                 stream.language = track['language']
+            if 'internet_media_type' in track:
+                stream.mime_type = track['internet_media_type']
             tstreams.append(stream)
         if tstreams:
             movie.text_streams = tstreams
@@ -145,12 +184,14 @@ class Indexer:
                 stream.channels = track['channel_s']
             if 'bit_rate' in track:
                 stream.bit_rate = track['bit_rate']
+            if 'internet_media_type' in track:
+                stream.mime_type = track['internet_media_type']
             astreams.append(stream)
         movie.audio_streams = astreams
         stream_counts.audio_stream_count = len(astreams)
         print("Processed {} audio streams".format(len(astreams)))
 
         movie.stream_counts = stream_counts
-        movie.title = self.general['complete_name']  # file name
+        movie.filename = self.general['complete_name']
 
         movie.save()
