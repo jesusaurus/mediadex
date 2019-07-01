@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import logging
+
 import yaml
 from elasticsearch import NotFoundError
 from elasticsearch_dsl import connections, Search
@@ -25,6 +27,7 @@ from mediadex import AudioStream, Movie, Song, StreamCounts, TextStream, VideoSt
 
 class Indexer:
     def __init__(self):
+        self.log = logging.getLogger('mediadex.indexer')
         connections.create_connection(hosts=['localhost'], timeout=5)
         Song.init()
         Movie.init()
@@ -54,7 +57,7 @@ class Indexer:
         elif acount == 1:
             self.dex_type = 'song'
         else:
-            print("v/t/a count: {}/{}/{}".format(vcount, tcount, acount))
+            self.log.debug("v/t/a count: {}/{}/{}".format(vcount, tcount, acount))
             raise Exception("Unknown media type")
 
     def index(self):
@@ -69,15 +72,15 @@ class Indexer:
 
             if r.hits.total.value == 0:
                 self.index_song()
-                print("Indexed new record for {}".format(filename))
+                self.log.info("Indexed new record for {}".format(filename))
             elif r.hits.total.value == 1:
                 song = r.hits[0]
                 self.index_song(song)
-                print("Updated an existing record for {}".format(song.filename))
+                self.log.info("Updated an existing record for {}".format(song.filename))
             else:
-                print("Found {} existing records for {}".format(r.hits.total.value, filename))
+                self.log.warning("Found {} existing records for {}".format(r.hits.total.value, filename))
                 for h in r.hits:
-                    print(h.filename)
+                    self.log.debug(h.filename)
 
         elif self.dex_type is 'movie':
             s = Movie.search()
@@ -85,15 +88,15 @@ class Indexer:
 
             if r.hits.total.value == 0:
                 self.index_movie()
-                print("Indexed new record for {}".format(filename))
+                self.log.info("Indexed new record for {}".format(filename))
             elif r.hits.total.value == 1:
                 movie = r.hits[0]
                 self.index_movie(movie)
-                print("Updated an existing record for {}".format(filename))
+                self.log.info("Updated an existing record for {}".format(filename))
             else:
-                print("Found {} existing records for {}".format(r.hits.total.value, filename))
-                print(r.hits[0])
-                print(r.hits[1])
+                self.log.warning("Found {} existing records for {}".format(r.hits.total.value, filename))
+                self.log.debug(r.hits[0])
+                self.log.debug(r.hits[1])
 
     def index_song(self, song=None):
         if song is None:
@@ -143,7 +146,7 @@ class Indexer:
                 stream.bit_rate = track['bit_rate']
             if 'bit_depth' in track:
                 stream.bit_depth = track['bit_depth']
-            if 'duration' in track:
+            if 'duration' in track and float(track['duration']) > 0:
                 stream.duration = track['duration']
             if 'language' in track:
                 stream.language = track['language']
@@ -156,14 +159,14 @@ class Indexer:
             vstreams.append(stream)
         movie.video_streams = vstreams
         stream_counts.video_stream_count = len(vstreams)
-        print("Processed {} video streams".format(len(vstreams)))
+        self.log.info("Processed {} video streams".format(len(vstreams)))
 
         tstreams = []
         for track in self.text_tracks:
             stream = TextStream()
             if 'codec_id' in track:
                 stream.codec = track['codec_id']
-            if 'duration' in track:
+            if 'duration' in track and float(track['duration']) > 0:
                 stream.duration = track['duration']
             if 'language' in track:
                 stream.language = track['language']
@@ -173,14 +176,14 @@ class Indexer:
         if tstreams:
             movie.text_streams = tstreams
         stream_counts.text_stream_count = len(tstreams)
-        print("Processed {} text streams".format(len(tstreams)))
+        self.log.info("Processed {} text streams".format(len(tstreams)))
 
         astreams = []
         for track in self.audio_tracks:
             stream = AudioStream()
             if 'codec_id' in track:
                 stream.codec = track['codec_id']
-            if 'duration' in track:
+            if 'duration' in track and float(track['duration']) > 0:
                 stream.duration = track['duration']
             if 'language' in track:
                 stream.language = track['language']
@@ -193,7 +196,7 @@ class Indexer:
             astreams.append(stream)
         movie.audio_streams = astreams
         stream_counts.audio_stream_count = len(astreams)
-        print("Processed {} audio streams".format(len(astreams)))
+        self.log.info("Processed {} audio streams".format(len(astreams)))
 
         movie.stream_counts = stream_counts
         movie.filename = self.general['complete_name']

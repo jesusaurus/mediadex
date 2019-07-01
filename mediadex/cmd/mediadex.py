@@ -17,6 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
+import logging
 import os
 
 import yaml
@@ -35,29 +36,41 @@ class App:
         parser = argparse.ArgumentParser()
         parser.add_argument('-p', '--path', dest='path', required=True,
             help='top directory to search for media')
+        parser.add_argument('-v', '--verbose', dest='verbose',
+            action='store_true', help='output more info')
         parser.add_argument('-dr', '--dry-run', dest='dry_run',
             action='store_true', help='write yaml to stdout instead of '
             'indexing into Elasticsearch')
 
         self.args = parser.parse_args()
 
+    def setup_logging(self, level):
+        root_log = logging.getLogger()
+        root_log.setLevel(level)
+        sh = logging.StreamHandler()
+        sh.setLevel(level)
+        sh.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        root_log.addHandler(sh)
+
+        self.log = logging.getLogger('mediadex')
+
     def process(self, f):
         try:
             _f = f.encode('utf-8', 'surrogateescape').decode('ISO-8859-1')
             info = MediaInfo.parse(_f).to_data()
         except Exception as exc:
-            print(exc)
+            self.log.exception(exc)
             return
 
         if self.args.dry_run:
-            print(yaml.dump(info))
+            self.log.info(yaml.dump(info))
         else:
             try:
                 self.dex.build(info['tracks'])
                 self.dex.index()
             except Exception as exc:
-                print(exc)
-                print(yaml.dump(info))
+                self.log.exception(exc)
+                self.log.info(yaml.dump(info))
 
     def walk(self):
         for (_top, _dirs, _files) in os.walk(self.args.path):
@@ -66,10 +79,16 @@ class App:
                 try:
                     self.process(fp)
                 except FileNotFoundError as exc:
-                    pass  # probably a bad symlink
+                    # probably a bad symlink
+                    self.log.exception(exc)
 
     def run(self):
         self.parse_args()
+
+        if self.args.verbose:
+            self.setup_logging(level=logging.INFO)
+        else:
+            self.setup_logging(level=logging.WARNING)
 
         if not self.args.dry_run:
             self.dex = Indexer()
