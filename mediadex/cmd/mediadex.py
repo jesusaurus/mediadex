@@ -24,7 +24,6 @@ import yaml
 from pymediainfo import MediaInfo
 
 from mediadex.indexer import Indexer
-from mediadex.indexer import Indexer
 
 
 class App:
@@ -34,15 +33,24 @@ class App:
 
     def parse_args(self):
         parser = argparse.ArgumentParser()
-        parser.add_argument('-p', '--path', dest='path', required=True,
-            help='top directory to search for media')
-        parser.add_argument('-v', '--verbose', dest='verbose',
-            action='store_true', help='output more info')
-        parser.add_argument('-es', '--elasticsearch-host', dest='host',
-            default='localhost:9200', help='elasticsearch host to connect to')
-        parser.add_argument('-dr', '--dry-run', dest='dry_run',
-            action='store_true', help='write to stdout as yaml instead of '
-            'indexing into elasticsearch')
+
+        parser.add_argument('-p', '--path',
+                            dest='path', required=True,
+                            help='top directory to search for media')
+
+        parser.add_argument('-v', '--verbose',
+                            dest='verbose',
+                            action='store_true',
+                            help='output additional log messages')
+
+        parser.add_argument('-es', '--elasticsearch-host',
+                            dest='host', default='localhost:9200',
+                            help='elasticsearch host to connect to')
+
+        parser.add_argument('-dr', '--dry-run',
+                            dest='dry_run', action='store_true',
+                            help='write to stdout as yaml instead of '
+                            'indexing into elasticsearch')
 
         self.args = parser.parse_args()
 
@@ -51,7 +59,8 @@ class App:
         root_log.setLevel(level)
         sh = logging.StreamHandler()
         sh.setLevel(level)
-        sh.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        f = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        sh.setFormatter(logging.Formatter(f))
         root_log.addHandler(sh)
 
         self.log = logging.getLogger('mediadex')

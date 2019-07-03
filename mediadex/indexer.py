@@ -18,11 +18,14 @@
 
 import logging
 
-import yaml
-from elasticsearch import NotFoundError
-from elasticsearch_dsl import connections, Search
+from elasticsearch_dsl import connections
 
-from mediadex import AudioStream, Movie, Song, StreamCounts, TextStream, VideoStream
+from mediadex import AudioStream
+from mediadex import Movie
+from mediadex import Song
+from mediadex import StreamCounts
+from mediadex import TextStream
+from mediadex import VideoStream
 
 
 class Indexer:
@@ -33,31 +36,34 @@ class Indexer:
         Movie.init()
 
     def build(self, data):
-        gen = [ t for t in data if t['track_type'] == 'General' ]
+        gen = [t for t in data if t['track_type'] == 'General']
         if len(gen) > 1:
             raise Exception("More than one General track found")
         elif len(gen) == 0:
             raise Exception("No General track found")
         self.general = gen.pop()
 
-        atracks = [ t for t in data if t['track_type'] == 'Audio' ]
+        atracks = [t for t in data if t['track_type'] == 'Audio']
         self.audio_tracks = atracks
         acount = len(atracks)
 
-        vtracks = [ t for t in data if t['track_type'] == 'Video' ]
+        vtracks = [t for t in data if t['track_type'] == 'Video']
         self.video_tracks = vtracks
         vcount = len(vtracks)
 
-        ttracks = [ t for t in data if t['track_type'] == 'Text' ]
+        ttracks = [t for t in data if t['track_type'] == 'Text']
         self.text_tracks = ttracks
         tcount = len(ttracks)
 
-        if vcount > 0:
+        if vcount > 0 and acount > 0:
             self.dex_type = 'movie'
+        elif vcount > 0:
+            self.dex_type = 'image'
         elif acount == 1:
             self.dex_type = 'song'
+        elif tcount == 1:
+            self.dex_type = 'text'
         else:
-            self.log.debug("v/t/a count: {}/{}/{}".format(vcount, tcount, acount))
             raise Exception("Unknown media type")
 
     def index(self):
@@ -66,7 +72,7 @@ class Indexer:
         if self.dex_type is None:
             raise Exception("Media type unset")
 
-        elif self.dex_type is 'song':
+        elif self.dex_type == 'song':
             s = Song.search()
             r = s.query('match', filename=filename).execute()
 
@@ -76,13 +82,15 @@ class Indexer:
             elif r.hits.total.value == 1:
                 song = r.hits[0]
                 self.index_song(song)
-                self.log.info("Updated an existing record for {}".format(song.filename))
+                self.log.info("Updated existing record for {}".format(
+                              song.filename))
             else:
-                self.log.warning("Found {} existing records for {}".format(r.hits.total.value, filename))
+                self.log.warning("Found {} existing records for {}".format(
+                                 r.hits.total.value, filename))
                 for h in r.hits:
                     self.log.debug(h.filename)
 
-        elif self.dex_type is 'movie':
+        elif self.dex_type == 'movie':
             s = Movie.search()
             r = s.query('match', filename=filename).execute()
 
@@ -92,9 +100,11 @@ class Indexer:
             elif r.hits.total.value == 1:
                 movie = r.hits[0]
                 self.index_movie(movie)
-                self.log.info("Updated an existing record for {}".format(filename))
+                self.log.info("Updated existing record for {}".format(
+                              movie.filename))
             else:
-                self.log.warning("Found {} existing records for {}".format(r.hits.total.value, filename))
+                self.log.warning("Found {} existing records for {}".format(
+                                 r.hits.total.value, filename))
                 self.log.debug(r.hits[0])
                 self.log.debug(r.hits[1])
 
@@ -107,7 +117,8 @@ class Indexer:
         stream = AudioStream()
 
         if 'format_profile' in song_track:
-            stream.codec = "{0} {1}".format(song_track['format'], song_track['format_profile'])
+            stream.codec = "{0} {1}".format(song_track['format'],
+                                            song_track['format_profile'])
         else:
             stream.codec = song_track.format
         if 'channel_s' in song_track:
@@ -151,9 +162,10 @@ class Indexer:
             if 'language' in track:
                 stream.language = track['language']
             if 'height' in track and 'width' in track:
-                stream.resolution = "{0}x{1}".format(track['width'], track['height'])
-                stream.height = track['height']
+                stream.resolution = "{0}x{1}".format(track['width'],
+                                                     track['height'])
                 stream.width = track['width']
+                stream.height = track['height']
             if 'internet_media_type' in track:
                 stream.mime_type = track['internet_media_type']
             vstreams.append(stream)
