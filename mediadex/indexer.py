@@ -26,9 +26,9 @@ from mediadex import AudioStream, Movie, Song, StreamCounts, TextStream, VideoSt
 
 
 class Indexer:
-    def __init__(self):
+    def __init__(self, host):
         self.log = logging.getLogger('mediadex.indexer')
-        connections.create_connection(hosts=['localhost'], timeout=5)
+        connections.create_connection(hosts=[host], timeout=10)
         Song.init()
         Movie.init()
 

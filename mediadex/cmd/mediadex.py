@@ -38,9 +38,11 @@ class App:
             help='top directory to search for media')
         parser.add_argument('-v', '--verbose', dest='verbose',
             action='store_true', help='output more info')
+        parser.add_argument('-es', '--elasticsearch-host', dest='host',
+            default='localhost:9200', help='elasticsearch host to connect to')
         parser.add_argument('-dr', '--dry-run', dest='dry_run',
-            action='store_true', help='write yaml to stdout instead of '
-            'indexing into Elasticsearch')
+            action='store_true', help='write to stdout as yaml instead of '
+            'indexing into elasticsearch')
 
         self.args = parser.parse_args()
 
@@ -91,7 +93,7 @@ class App:
             self.setup_logging(level=logging.WARNING)
 
         if not self.args.dry_run:
-            self.dex = Indexer()
+            self.dex = Indexer(self.args.host)
 
         self.walk()
 
