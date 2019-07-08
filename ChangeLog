@@ -1,0 +1,19 @@
+CHANGES
+=======
+
+0.1.1
+-----
+
+* prepare for release
+* fixup readme
+* Add flake8 testing via tox
+* Add elasticsearch host parameter
+* convert to logging
+
+0.1.0
+-----
+
+* A little cleanup
+* Now with fewer duplicates
+* Now with more data processing
+* It kinda almost does something
