@@ -20,6 +20,7 @@ import argparse
 import logging
 import os
 
+import chardet
 import yaml
 from pymediainfo import MediaInfo
 
@@ -59,29 +60,52 @@ class App:
         root_log.setLevel(level)
         sh = logging.StreamHandler()
         sh.setLevel(level)
-        f = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        sh.setFormatter(logging.Formatter(f))
+        fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        sh.setFormatter(logging.Formatter(fmt))
         root_log.addHandler(sh)
 
         self.log = logging.getLogger('mediadex')
+        self.log.setLevel(level)
 
-    def process(self, f):
-        try:
-            _f = f.encode('utf-8', 'surrogateescape').decode('ISO-8859-1')
-            info = MediaInfo.parse(_f).to_data()
-        except Exception as exc:
-            self.log.exception(exc)
-            return
-
+    def work(self, data):
         if self.args.dry_run:
-            self.log.info(yaml.dump(info))
+            self.log.info(yaml.dump(data))
         else:
             try:
-                self.dex.build(info['tracks'])
+                self.dex.build(data['tracks'])
                 self.dex.index()
             except Exception as exc:
                 self.log.exception(exc)
-                self.log.info(yaml.dump(info))
+                self.log.info(yaml.dump(data))
+                return 1
+        return 0
+
+    def open_file(self, f):
+        info = {}
+
+        try:
+            info = MediaInfo.parse(f).to_data()
+        except FileNotFoundError:
+            _enc = f.encode('utf-8', 'surrogateescape')
+            charset = chardet.detect(f).get('encoding')
+            self.log.info("chardet found: {}".format(charset))
+
+            try:
+                _f = _enc.decode(charset)
+                info = MediaInfo.parse(_f).to_data()
+            except FileNotFoundError:
+                self.log.warning("chardet failure: {}".format(_f))
+
+        except Exception as exc:
+            self.log.exception(exc)
+
+        finally:
+            if not info:
+                _f = f.encode('utf-8', 'surrogateescape')
+                self.log.error("Could not read: {}".format(_f))
+                return 1
+
+        return self.work(info)
 
     def walk(self):
         for (_top, _dirs, _files) in os.walk(self.args.path):
@@ -104,9 +128,9 @@ class App:
         if not self.args.dry_run:
             self.dex = Indexer(self.args.host)
 
-        self.walk()
+        return self.walk()
 
 
 def main():
     app = App()
-    app.run()
+    return app.run()

@@ -83,10 +83,10 @@ class Indexer:
                 song = r.hits[0]
                 self.index_song(song)
                 self.log.info("Updated existing record for {}".format(
-                              song.filename))
+                        song.filename))
             else:
                 self.log.warning("Found {} existing records for {}".format(
-                                 r.hits.total.value, filename))
+                        r.hits.total.value, filename))
                 for h in r.hits:
                     self.log.debug(h.filename)
 
@@ -101,10 +101,10 @@ class Indexer:
                 movie = r.hits[0]
                 self.index_movie(movie)
                 self.log.info("Updated existing record for {}".format(
-                              movie.filename))
+                        movie.filename))
             else:
                 self.log.warning("Found {} existing records for {}".format(
-                                 r.hits.total.value, filename))
+                        r.hits.total.value, filename))
                 self.log.debug(r.hits[0])
                 self.log.debug(r.hits[1])
 
@@ -117,10 +117,12 @@ class Indexer:
         stream = AudioStream()
 
         if 'format_profile' in song_track:
-            stream.codec = "{0} {1}".format(song_track['format'],
-                                            song_track['format_profile'])
+            stream.codec = "{0} {1}".format(
+                    song_track['format'],
+                    song_track['format_profile'],
+            )
         else:
-            stream.codec = song_track.format
+            stream.codec = song_track['format']
         if 'channel_s' in song_track:
             stream.channels = song_track['channel_s']
         if 'bit_rate' in song_track:
@@ -162,10 +164,12 @@ class Indexer:
             if 'language' in track:
                 stream.language = track['language']
             if 'height' in track and 'width' in track:
-                stream.resolution = "{0}x{1}".format(track['width'],
-                                                     track['height'])
-                stream.width = track['width']
                 stream.height = track['height']
+                stream.width = track['width']
+                stream.resolution = "{0}x{1}".format(
+                        track['height'],
+                        track['width'],
+                )
             if 'internet_media_type' in track:
                 stream.mime_type = track['internet_media_type']
             vstreams.append(stream)
