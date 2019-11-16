@@ -22,7 +22,6 @@ from elasticsearch_dsl import InnerDoc
 from elasticsearch_dsl import Integer
 from elasticsearch_dsl import Keyword
 from elasticsearch_dsl import Object
-from elasticsearch_dsl import Text
 
 
 class _Index:
@@ -41,7 +40,7 @@ class StreamCounts(InnerDoc):
 class Media(Document):
     title = Keyword()
     year = Integer()
-    genre = Keyword()
+    genre = Keyword(multi=True)
     stream_counts = Object(StreamCounts)
     container = Keyword()
     filename = Keyword()
@@ -50,7 +49,7 @@ class Media(Document):
 class Stream(InnerDoc):
     codec = Keyword()
     duration = Float()
-    language = Text()
+    language = Keyword()
     mime_type = Keyword()
 
 
