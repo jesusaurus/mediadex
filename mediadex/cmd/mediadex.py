@@ -25,6 +25,7 @@ import yaml
 from pymediainfo import MediaInfo
 
 from mediadex.indexer import Indexer
+from mediadex.indexer import IndexerException
 
 
 class App:
@@ -74,7 +75,7 @@ class App:
             try:
                 self.dex.build(data['tracks'])
                 self.dex.index()
-            except Exception as exc:
+            except IndexerException as exc:
                 self.log.exception(exc)
                 self.log.info(yaml.dump(data))
                 return 1
@@ -108,14 +109,16 @@ class App:
         return self.work(info)
 
     def walk(self):
+        retval = 0
         for (_top, _dirs, _files) in os.walk(self.args.path):
             for _file in _files:
                 fp = os.path.join(_top, _file)
                 try:
-                    self.process(fp)
-                except FileNotFoundError as exc:
-                    # probably a bad symlink
+                    retval += self.open_file(fp)
+                except Exception as exc:
                     self.log.exception(exc)
+                    retval += 1
+        return retval
 
     def run(self):
         self.parse_args()

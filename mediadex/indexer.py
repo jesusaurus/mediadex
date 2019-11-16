@@ -28,6 +28,10 @@ from mediadex import TextStream
 from mediadex import VideoStream
 
 
+class IndexerException(Exception):
+    pass
+
+
 class Indexer:
     def __init__(self, host):
         self.log = logging.getLogger('mediadex.indexer')
@@ -38,9 +42,9 @@ class Indexer:
     def build(self, data):
         gen = [t for t in data if t['track_type'] == 'General']
         if len(gen) > 1:
-            raise Exception("More than one General track found")
+            raise IndexerException("More than one General track found")
         elif len(gen) == 0:
-            raise Exception("No General track found")
+            raise IndexerException("No General track found")
         self.general = gen.pop()
 
         atracks = [t for t in data if t['track_type'] == 'Audio']
@@ -63,14 +67,24 @@ class Indexer:
             self.dex_type = 'song'
         elif tcount == 1:
             self.dex_type = 'text'
+        elif acount == 0 and vcount == 0 and tcount == 0:
+            self.dex_type = 'empty'
         else:
-            raise Exception("Unknown media type")
+            self.dex_type = 'unknown'
 
     def index(self):
         filename = self.general['complete_name']
 
-        if self.dex_type is None:
-            raise Exception("Media type unset")
+        if self.dex_type == 'empty':
+            return
+
+        elif self.dex_type == 'unknown':
+            self.log.warning("Unknown format ({}, {}, {}), skipping {}".format(
+                    len(self.video_tracks),
+                    len(self.audio_tracks),
+                    len(self.text_tracks),
+                    filename)
+            )
 
         elif self.dex_type == 'song':
             s = Song.search()
