@@ -4,3 +4,4 @@ dist/
 .eggs
 mediadex.egg-info/
 .tox
+.venv
