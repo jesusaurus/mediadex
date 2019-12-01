@@ -73,8 +73,7 @@ class App:
             self.log.info(yaml.dump(data))
         else:
             try:
-                self.dex.build(data['tracks'])
-                self.dex.index()
+                self.dex.index(data['tracks'])
             except IndexerException as exc:
                 self.log.exception(exc)
                 self.log.info(yaml.dump(data))

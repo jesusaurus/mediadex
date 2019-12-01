@@ -22,6 +22,7 @@ from elasticsearch_dsl import InnerDoc
 from elasticsearch_dsl import Integer
 from elasticsearch_dsl import Keyword
 from elasticsearch_dsl import Object
+from elasticsearch_dsl import Text
 
 
 class _Index:
@@ -71,11 +72,40 @@ class VideoStream(Stream):
     width = Integer()
 
 
+class ID3(InnerDoc):
+    genre = Keyword()
+    mood = Keyword()
+
+    album = Text()
+    albumartist = Text()
+    arranger = Text()
+    artist = Text()
+    bpm = Text()
+    compilation = Text()
+    composer = Text()
+    conductor = Text()
+    date = Text()
+    discnumber = Text()
+    language = Text()
+    length = Text()
+    media = Text()
+    performer = Text()
+    title = Text()
+    tracknumber = Text()
+
+    acoustid_fingerprint = Text()
+    acoustid_id = Text()
+
+    musicip_fingerprint = Text()
+    musicip_puid = Text()
+
+
 class Song(Media):
     artist = Keyword()
     album = Keyword()
 
     audio_stream = Object(AudioStream)
+    id3 = Object(ID3)
 
     class Index(_Index):
         name = 'music'

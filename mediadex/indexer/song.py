@@ -1,0 +1,93 @@
+#!/usr/bin/python3
+
+# Mediadex: Index media metadata into elasticsearch
+# Copyright (C) 2019  K Jonathan Harker
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+import logging
+
+from mutagen import MutagenError
+from mutagen.easyid3 import EasyID3
+from mutagen.id3._util import ID3NoHeaderError
+
+from mediadex import AudioStream
+from mediadex import ID3
+from mediadex import Song
+from mediadex import StreamCounts
+
+
+class SongIndexer:
+    def __init__(self):
+        self.log = logging.getLogger('mediadex.indexer.song')
+
+    def index(self, item, song=None):
+        if song is None:
+            song = Song()
+        stream_counts = StreamCounts()
+
+        song_track = item.audio_tracks.pop()
+        stream = AudioStream()
+
+        if 'format_profile' in song_track:
+            stream.codec = "{0} {1}".format(
+                    song_track['format'],
+                    song_track['format_profile'],
+            )
+        else:
+            stream.codec = song_track['format']
+
+        if 'duration' in song_track:
+            try:
+                stream.duration = float(song_track['duration'])
+            except ValueError:
+                pass
+
+        if 'channel_s' in song_track:
+            stream.channels = song_track['channel_s']
+        if 'bit_rate' in song_track:
+            stream.bit_rate = song_track['bit_rate']
+        if 'language' in song_track:
+            stream.language = song_track['language']
+        if 'sampling_rate' in song_track:
+            stream.sample_rate = song_track['sampling_rate']
+        if 'internet_media_type' in song_track:
+            stream.mime_type = song_track['internet_media_type']
+
+        song.audio_stream = stream
+        song.filename = item.general['complete_name']
+
+        try:
+            info = EasyID3(song.filename)
+            id3_doc = ID3()
+
+            for tag in ['album', 'bpm', 'compilation', 'composer', 'length',
+                        'media', 'mood', 'title', 'artist', 'albumartist',
+                        'conductor', 'arranger', 'tracknumber', 'language',
+                        'genre', 'date', 'musicip_puid', 'musicip_fingerprint',
+                        'performer', 'acoustid_fingerprint', 'acoustid_id']:
+                if tag in info:
+                    setattr(id3_doc, tag, info[tag])
+            song.id3 = id3_doc
+
+        except ID3NoHeaderError:
+            pass
+        except MutagenError as exc:
+            self.log.exception(exc)
+
+        stream_counts.audio_stream_count = 1
+        stream_counts.video_stream_count = 0
+        stream_counts.text_stream_count = 0
+
+        song.save()
