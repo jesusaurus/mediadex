@@ -19,3 +19,8 @@ test: tdeps
 .PHONY: install
 install: deps
 	.venv/bin/pip install .
+
+.PHONY: clean-es
+clean-es:
+	curl -XDELETE http://localhost:9200/movies
+	curl -XDELETE http://localhost:9200/music
