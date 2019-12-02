@@ -23,7 +23,7 @@ from mutagen.easyid3 import EasyID3
 from mutagen.id3._util import ID3NoHeaderError
 
 from mediadex import AudioStream
-from mediadex import ID3
+from mediadex import ID
 from mediadex import Song
 from mediadex import StreamCounts
 
@@ -70,16 +70,22 @@ class SongIndexer:
 
         try:
             info = EasyID3(song.filename)
-            id3_doc = ID3()
+            id_doc = ID()
 
-            for tag in ['album', 'bpm', 'compilation', 'composer', 'length',
-                        'media', 'mood', 'title', 'artist', 'albumartist',
-                        'conductor', 'arranger', 'tracknumber', 'language',
-                        'genre', 'date', 'musicip_puid', 'musicip_fingerprint',
-                        'performer', 'acoustid_fingerprint', 'acoustid_id']:
+            if 'date' in info:
+                song.year = info['date']
+
+            for tag in ['album', 'albumartist', 'arranger', 'artist', 'bpm',
+                        'compilation', 'composer', 'conductor', 'tracknumber',
+                        'title', 'mood', 'genre', 'performer']:
                 if tag in info:
-                    setattr(id3_doc, tag, info[tag])
-            song.id3 = id3_doc
+                    setattr(song, tag, info[tag])
+
+            for tag in ['musicip_puid', 'musicip_fingerprint',
+                        'acoustid_fingerprint', 'acoustid_id']:
+                if tag in info:
+                    setattr(id_doc, tag, info[tag])
+            song.id_info = id_doc
 
         except ID3NoHeaderError:
             pass

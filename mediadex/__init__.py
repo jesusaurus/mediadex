@@ -40,7 +40,7 @@ class StreamCounts(InnerDoc):
 
 class Media(Document):
     title = Keyword()
-    year = Integer()
+    year = Keyword()
     genre = Keyword(multi=True)
     stream_counts = Object(StreamCounts)
     container = Keyword()
@@ -72,27 +72,7 @@ class VideoStream(Stream):
     width = Integer()
 
 
-class ID3(InnerDoc):
-    genre = Keyword()
-    mood = Keyword()
-
-    album = Text()
-    albumartist = Text()
-    arranger = Text()
-    artist = Text()
-    bpm = Text()
-    compilation = Text()
-    composer = Text()
-    conductor = Text()
-    date = Text()
-    discnumber = Text()
-    language = Text()
-    length = Text()
-    media = Text()
-    performer = Text()
-    title = Text()
-    tracknumber = Text()
-
+class ID(InnerDoc):
     acoustid_fingerprint = Text()
     acoustid_id = Text()
 
@@ -101,11 +81,21 @@ class ID3(InnerDoc):
 
 
 class Song(Media):
-    artist = Keyword()
-    album = Keyword()
-
     audio_stream = Object(AudioStream)
-    id3 = Object(ID3)
+    id_info = Object(ID)
+
+    album = Text()
+    albumartist = Text()
+    arranger = Keyword()
+    artist = Keyword()
+    bpm = Float()
+    compilation = Text()
+    composer = Keyword()
+    conductor = Keyword()
+    discnumber = Integer()
+    mood = Keyword()
+    performer = Keyword()
+    tracknumber = Integer()
 
     class Index(_Index):
         name = 'music'
