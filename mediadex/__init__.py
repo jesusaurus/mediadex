@@ -112,8 +112,9 @@ class Song(Media):
 
 
 class Cinema(Media):
-    director = Keyword()
     cast = Keyword(multi=True)
+    director = Keyword(multi=True)
+    writer = Keyword(multi=True)
 
     audio_streams = Object(AudioStream, multi=True)
     text_streams = Object(TextStream, multi=True)
