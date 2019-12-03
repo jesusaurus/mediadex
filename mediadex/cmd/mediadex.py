@@ -37,12 +37,12 @@ class App:
         parser = argparse.ArgumentParser()
 
         parser.add_argument('-p', '--path',
-                            dest='path', required=True,
+                            dest='path', required=True, action='append',
                             help='top directory to search for media')
 
         parser.add_argument('-v', '--verbose',
                             dest='verbose',
-                            action='store_true',
+                            action='count',
                             help='output additional log messages')
 
         parser.add_argument('-es', '--elasticsearch-host',
@@ -109,23 +109,26 @@ class App:
 
     def walk(self):
         retval = 0
-        for (_top, _dirs, _files) in os.walk(self.args.path):
-            for _file in _files:
-                fp = os.path.join(_top, _file)
-                try:
-                    retval += self.open_file(fp)
-                except Exception as exc:
-                    self.log.exception(exc)
-                    retval += 1
+        for path in self.args.path:
+            for (_top, _dirs, _files) in os.walk(path):
+                for _file in _files:
+                    fp = os.path.join(_top, _file)
+                    try:
+                        retval += self.open_file(fp)
+                    except Exception as exc:
+                        self.log.exception(exc)
+                        retval += 1
         return retval
 
     def run(self):
         self.parse_args()
 
-        if self.args.verbose:
+        if self.args.verbose is None:
+            self.setup_logging(level=logging.WARNING)
+        elif self.args.verbose == 1:
             self.setup_logging(level=logging.INFO)
         else:
-            self.setup_logging(level=logging.WARNING)
+            self.setup_logging(level=logging.DEBUG)
 
         if not self.args.dry_run:
             self.dex = Indexer(self.args.host)

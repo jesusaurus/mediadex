@@ -92,10 +92,10 @@ class Song(Media):
     compilation = Text()
     composer = Keyword()
     conductor = Keyword()
-    discnumber = Integer()
+    discnumber = Text()
     mood = Keyword()
     performer = Keyword()
-    tracknumber = Integer()
+    tracknumber = Text()
 
     class Index(_Index):
         name = 'music'
