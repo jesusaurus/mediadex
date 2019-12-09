@@ -26,10 +26,11 @@ from mediadex import StreamCounts
 from mediadex import TextStream
 from mediadex import VideoStream
 
+LOG = logging.getLogger('mediadex.indexer.movie')
+
 
 class MovieIndexer:
     def __init__(self):
-        self.log = logging.getLogger('mediadex.indexer.movie')
         self.imdb = IMDb()
 
     def astream(self, track):
@@ -94,7 +95,7 @@ class MovieIndexer:
             vstreams.append(stream)
         movie.video_streams = vstreams
         stream_counts.video_stream_count = len(vstreams)
-        self.log.info("Processed {} video streams".format(len(vstreams)))
+        LOG.info("Processed {} video streams".format(len(vstreams)))
 
         tstreams = []
         for track in item.text_tracks:
@@ -103,7 +104,7 @@ class MovieIndexer:
         if tstreams:
             movie.text_streams = tstreams
         stream_counts.text_stream_count = len(tstreams)
-        self.log.info("Processed {} text streams".format(len(tstreams)))
+        LOG.info("Processed {} text streams".format(len(tstreams)))
 
         astreams = []
         for track in item.audio_tracks:
@@ -112,7 +113,7 @@ class MovieIndexer:
 
         movie.audio_streams = astreams
         stream_counts.audio_stream_count = len(astreams)
-        self.log.info("Processed {} audio streams".format(len(astreams)))
+        LOG.info("Processed {} audio streams".format(len(astreams)))
 
         movie.stream_counts = stream_counts
         movie.filename = item.general['complete_name']
@@ -128,8 +129,8 @@ class MovieIndexer:
 
         imdb_count = len(_imdb)
         if imdb_count > 1:
-            self.log.warning("Found {} IMDB matches, "
-                             "assuming one".format(imdb_count))
+            LOG.warning("Found {} IMDB matches, "
+                        "assuming one".format(imdb_count))
             for i in _imdb:
                 if i['kind'] == 'movie':
                     imdb_info = i
@@ -140,7 +141,7 @@ class MovieIndexer:
 
         if imdb_info:
             self.imdb.update(imdb_info)
-            self.log.info("IMDB Title: {}".format(imdb_info['title']))
+            LOG.info("IMDB Title: {}".format(imdb_info['title']))
 
             if 'cast' in imdb_info:
                 movie.cast = [x['name'] for x in imdb_info['cast']]

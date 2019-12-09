@@ -49,6 +49,7 @@ class Media(Document):
 
 class Stream(InnerDoc):
     codec = Keyword()
+    codec_profile = Keyword()
     duration = Float()
     language = Keyword()
     mime_type = Keyword()

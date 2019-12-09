@@ -26,10 +26,11 @@ from mediadex.exc import IndexerException
 from mediadex.indexer.movie import MovieIndexer
 from mediadex.indexer.song import SongIndexer
 
+LOG = logging.getLogger('mediadex.indexer')
+
 
 class Item:
     def __init__(self, data):
-        self.log = logging.getLogger('mediadex.indexer')
         gen = [t for t in data if t['track_type'] == 'General']
         if len(gen) > 1:
             raise IndexerException("More than one General track found")
@@ -66,7 +67,6 @@ class Item:
 class Indexer:
     def __init__(self, host):
         self.item = None
-        self.log = logging.getLogger('mediadex.indexer')
         connections.create_connection(hosts=[host], timeout=10)
         Song.init()
         Movie.init()
@@ -80,7 +80,7 @@ class Indexer:
             return
 
         elif item.dex_type == 'unknown':
-            self.log.warning("Unknown format ({}, {}, {}), skipping {}".format(
+            LOG.warning("Unknown format ({}, {}, {}), skipping {}".format(
                     len(item.video_tracks),
                     len(item.audio_tracks),
                     len(item.text_tracks),
@@ -93,17 +93,17 @@ class Indexer:
 
             if r.hits.total.value == 0:
                 self.index_song(item)
-                self.log.info("Indexed new record for {}".format(filename))
+                LOG.info("Indexed new Song for {}".format(filename))
             elif r.hits.total.value == 1:
                 song = r.hits[0]
                 self.index_song(item, song)
-                self.log.info("Updated existing record for {}".format(
+                LOG.info("Updated existing Song for {}".format(
                         song.filename))
             else:
-                self.log.warning("Found {} existing records for {}".format(
+                LOG.warning("Found {} existing Songs for {}".format(
                         r.hits.total.value, filename))
                 for h in r.hits:
-                    self.log.debug(h.filename)
+                    LOG.debug(h.filename)
 
         elif item.dex_type == 'movie':
             s = Movie.search()
@@ -111,17 +111,17 @@ class Indexer:
 
             if r.hits.total.value == 0:
                 self.index_movie(item)
-                self.log.info("Indexed new record for {}".format(filename))
+                LOG.info("Indexed new Movie for {}".format(filename))
             elif r.hits.total.value == 1:
                 movie = r.hits[0]
                 self.index_movie(item, movie)
-                self.log.info("Updated existing record for {}".format(
+                LOG.info("Updated existing Movie for {}".format(
                         movie.filename))
             else:
-                self.log.warning("Found {} existing records for {}".format(
+                LOG.warning("Found {} existing Movies for {}".format(
                         r.hits.total.value, filename))
-                self.log.debug(r.hits[0])
-                self.log.debug(r.hits[1])
+                LOG.debug(r.hits[0])
+                LOG.debug(r.hits[1])
 
     def index_song(self, item, song=None):
         si = SongIndexer()

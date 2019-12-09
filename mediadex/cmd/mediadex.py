@@ -32,6 +32,7 @@ class App:
     def __init__(self):
         self.args = None
         self.dex = None
+        self.log = None
 
     def parse_args(self):
         parser = argparse.ArgumentParser()
@@ -64,6 +65,12 @@ class App:
         fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         sh.setFormatter(logging.Formatter(fmt))
         root_log.addHandler(sh)
+
+        log = logging.getLogger('elasticsearch')
+        log.setLevel(logging.WARNING)
+
+        log = logging.getLogger('imdb')
+        log.setLevel(logging.WARNING)
 
         self.log = logging.getLogger('mediadex')
         self.log.setLevel(level)

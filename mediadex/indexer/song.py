@@ -27,10 +27,12 @@ from mediadex import ID
 from mediadex import Song
 from mediadex import StreamCounts
 
+LOG = logging.getLogger('mediadex.indexer.song')
+
 
 class SongIndexer:
     def __init__(self):
-        self.log = logging.getLogger('mediadex.indexer.song')
+        pass
 
     def index(self, item, song=None):
         if song is None:
@@ -40,20 +42,16 @@ class SongIndexer:
         song_track = item.audio_tracks.pop()
         stream = AudioStream()
 
-        if 'format_profile' in song_track:
-            stream.codec = "{0} {1}".format(
-                    song_track['format'],
-                    song_track['format_profile'],
-            )
-        else:
-            stream.codec = song_track['format']
-
         if 'duration' in song_track:
             try:
                 stream.duration = float(song_track['duration'])
-            except ValueError:
-                pass
+            except ValueError as exc:
+                LOG.excetpion(exc)
 
+        if 'format' in song_track:
+            stream.codec = song_track['format']
+        if 'format_profile' in song_track:
+            stream.codec_profile = song_track['format_profile']
         if 'channel_s' in song_track:
             stream.channels = song_track['channel_s']
         if 'bit_rate' in song_track:
@@ -90,10 +88,11 @@ class SongIndexer:
         except ID3NoHeaderError:
             pass
         except MutagenError as exc:
-            self.log.exception(exc)
+            LOG.exception(exc)
 
         stream_counts.audio_stream_count = 1
         stream_counts.video_stream_count = 0
         stream_counts.text_stream_count = 0
+        song.stream_counts = stream_counts
 
         song.save()
