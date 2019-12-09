@@ -17,6 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
+import datetime
 import logging
 import os
 
@@ -38,7 +39,8 @@ class App:
         parser = argparse.ArgumentParser()
 
         parser.add_argument('-p', '--path',
-                            dest='path', required=True, action='append',
+                            dest='path',
+                            action='append', required=True,
                             help='top directory to search for media')
 
         parser.add_argument('-v', '--verbose',
@@ -46,12 +48,19 @@ class App:
                             action='count',
                             help='output additional log messages')
 
+        parser.add_argument('--today',
+                            dest='today',
+                            action='store_true',
+                            help='only scan recent files')
+
         parser.add_argument('-es', '--elasticsearch-host',
-                            dest='host', default='localhost:9200',
+                            dest='host',
+                            action='store', default='localhost:9200',
                             help='elasticsearch host to connect to')
 
         parser.add_argument('-dr', '--dry-run',
-                            dest='dry_run', action='store_true',
+                            dest='dry_run',
+                            action='store_true',
                             help='write to stdout as yaml instead of '
                             'indexing into elasticsearch')
 
@@ -89,6 +98,14 @@ class App:
 
     def open_file(self, f):
         info = {}
+
+        if self.args.today:
+            _stat = os.stat(f)
+            mtime = datetime.datetime.fromtimestamp(_stat.st_mtime)
+            diff = datetime.datetime.now() - mtime
+            if diff > datetime.timedelta(days=1):
+                self.log.debug('Skipping {} due to timestamp'.format(f))
+                return 0
 
         try:
             info = MediaInfo.parse(f).to_data()

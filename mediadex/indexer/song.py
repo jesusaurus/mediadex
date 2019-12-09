@@ -37,7 +37,7 @@ class SongIndexer:
     def index(self, item, song=None):
         if song is None:
             song = Song()
-        stream_counts = StreamCounts()
+        orig_dict = song.to_dict()
 
         song_track = item.audio_tracks.pop()
         stream = AudioStream()
@@ -90,9 +90,13 @@ class SongIndexer:
         except MutagenError as exc:
             LOG.exception(exc)
 
+        stream_counts = StreamCounts()
         stream_counts.audio_stream_count = 1
         stream_counts.video_stream_count = 0
         stream_counts.text_stream_count = 0
         song.stream_counts = stream_counts
 
-        song.save()
+        if song.to_dict() != orig_dict:
+            song.save()
+        else:
+            LOG.debug("Song unchanged")

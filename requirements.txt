@@ -4,3 +4,4 @@ PyYAML
 chardet
 mutagen
 IMDbPY
+python-dateutil
