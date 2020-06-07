@@ -6,11 +6,11 @@ all: test install
 
 .PHONY: deps
 deps: .venv
-	.venv/bin/pip install -r requirements.txt
+	.venv/bin/pip install -U -r requirements.txt
 
 .PHONY: tdeps
 tdeps: .venv
-	.venv/bin/pip install -r test-requirements.txt
+	.venv/bin/pip install -U -r test-requirements.txt
 
 .PHONY: test
 test: tdeps
@@ -20,7 +20,14 @@ test: tdeps
 install: deps
 	.venv/bin/pip install .
 
-.PHONY: clean-es
-clean-es:
+.PHONY: clean
+clean:
+	.venv/bin/python3 setup.py clean
+
+.PHONY: purge-movies
+purge-movies:
 	curl -XDELETE http://localhost:9200/movies
+
+.PHONY: purge-music
+purge-music:
 	curl -XDELETE http://localhost:9200/music
