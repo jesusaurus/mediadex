@@ -40,13 +40,19 @@ class App:
 
         parser.add_argument('-p', '--path',
                             dest='path',
-                            action='append', required=True,
+                            action='append',
                             help='top directory to search for media')
 
         parser.add_argument('-v', '--verbose',
                             dest='verbose',
                             action='count',
                             help='output additional log messages')
+
+        parser.add_argument('--purge',
+                            dest='purge',
+                            action='store_true',
+                            help='Scan for deleted files and remove '
+                            'their entries from elasticsearch')
 
         parser.add_argument('--today',
                             dest='today',
@@ -84,15 +90,18 @@ class App:
         self.log = logging.getLogger('mediadex')
         self.log.setLevel(level)
 
-    def work(self, data):
+    def index(self, data):
         if self.args.dry_run:
             self.log.info(yaml.dump(data))
         else:
             try:
                 self.dex.index(data['tracks'])
             except IndexerException as exc:
-                self.log.exception(exc)
-                self.log.info(yaml.dump(data))
+                if self.log.isEnabledFor(logging.INFO):
+                    self.log.exception(exc)
+                else:
+                    self.log.warn(str(exc))
+                self.log.debug(yaml.dump(data))
                 return 1
         return 0
 
@@ -121,7 +130,10 @@ class App:
                 self.log.warning("chardet failure: {}".format(_f))
 
         except Exception as exc:
-            self.log.exception(exc)
+            if self.log.isEnabledFor(logging.INFO):
+                self.log.exception(exc)
+            else:
+                self.log.warn(str(exc))
 
         finally:
             if not info:
@@ -129,9 +141,9 @@ class App:
                 self.log.error("Could not read: {}".format(_f))
                 return 1
 
-        return self.work(info)
+        return self.index(info)
 
-    def walk(self):
+    def walk_paths(self):
         retval = 0
         for path in self.args.path:
             for (_top, _dirs, _files) in os.walk(path):
@@ -140,8 +152,20 @@ class App:
                     try:
                         retval += self.open_file(fp)
                     except Exception as exc:
-                        self.log.exception(exc)
+                        if self.log.isEnabledFor(logging.INFO):
+                            self.log.exception(exc)
+                        else:
+                            self.log.warn(str(exc))
                         retval += 1
+        return retval
+
+    def purge(self):
+        retval = 0
+        try:
+            retval += self.dex.purge()
+        except Exception as exc:
+            self.log.exception(exc)
+            retval += 1
         return retval
 
     def run(self):
@@ -156,8 +180,10 @@ class App:
 
         if not self.args.dry_run:
             self.dex = Indexer(self.args.host)
+            if self.args.purge:
+                return self.purge()
 
-        return self.walk()
+        return self.walk_paths()
 
 
 def main():

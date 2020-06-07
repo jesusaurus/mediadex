@@ -21,6 +21,7 @@ from elasticsearch_dsl import Float
 from elasticsearch_dsl import InnerDoc
 from elasticsearch_dsl import Integer
 from elasticsearch_dsl import Keyword
+from elasticsearch_dsl import Long
 from elasticsearch_dsl import Object
 from elasticsearch_dsl import Text
 
@@ -44,7 +45,9 @@ class Media(Document):
     genre = Keyword(multi=True)
     stream_counts = Object(StreamCounts)
     container = Keyword()
-    filename = Keyword()
+    dirname = Text()
+    filename = Text()
+    filesize = Long()
 
 
 class Stream(InnerDoc):
@@ -60,13 +63,13 @@ class TextStream(Stream):
 
 
 class AudioStream(Stream):
-    channels = Integer()
-    bit_rate = Integer()
-    sample_rate = Integer()
+    channels = Keyword()
+    bit_rate = Keyword()
+    sample_rate = Keyword()
 
 
 class VideoStream(Stream):
-    bit_rate = Integer()
+    bit_rate = Long()
     bit_depth = Integer()
     resolution = Keyword()
     height = Integer()

@@ -20,11 +20,8 @@ import logging
 
 from imdb import IMDb
 
-from mediadex import AudioStream
 from mediadex import Movie
 from mediadex import StreamCounts
-from mediadex import TextStream
-from mediadex import VideoStream
 
 LOG = logging.getLogger('mediadex.indexer.movie')
 
@@ -33,104 +30,55 @@ class MovieIndexer:
     def __init__(self):
         self.imdb = IMDb()
 
-    def astream(self, track):
-        stream = AudioStream()
-        if 'codec_id' in track:
-            stream.codec = track['codec_id']
-        if 'duration' in track and float(track['duration']) > 0:
-            stream.duration = track['duration']
-        if 'language' in track:
-            stream.language = track['language']
-        if 'channel_s' in track:
-            stream.channels = track['channel_s']
-        if 'bit_rate' in track:
-            stream.bit_rate = track['bit_rate']
-        if 'internet_media_type' in track:
-            stream.mime_type = track['internet_media_type']
-        return stream
-
-    def tstream(self, track):
-        stream = TextStream()
-        if 'codec_id' in track:
-            stream.codec = track['codec_id']
-        if 'duration' in track and float(track['duration']) > 0:
-            stream.duration = track['duration']
-        if 'language' in track:
-            stream.language = track['language']
-        if 'internet_media_type' in track:
-            stream.mime_type = track['internet_media_type']
-        return stream
-
-    def vstream(self, track):
-        stream = VideoStream()
-        if 'codec_id' in track:
-            stream.codec = track['codec_id']
-        if 'bit_rate' in track:
-            stream.bit_rate = track['bit_rate']
-        if 'bit_depth' in track:
-            stream.bit_depth = track['bit_depth']
-        if 'duration' in track and float(track['duration']) > 0:
-            stream.duration = track['duration']
-        if 'language' in track:
-            stream.language = track['language']
-        if 'height' in track and 'width' in track:
-            stream.height = track['height']
-            stream.width = track['width']
-            stream.resolution = "{0}x{1}".format(
-                    track['height'],
-                    track['width'],
-            )
-        if 'internet_media_type' in track:
-            stream.mime_type = track['internet_media_type']
-        return stream
-
     def index(self, item, movie=None):
         if movie is None:
             movie = Movie()
+        orig_dict = movie.to_dict()
+
         stream_counts = StreamCounts()
 
-        vstreams = []
-        for track in item.video_tracks:
-            stream = self.vstream(track)
-            vstreams.append(stream)
+        vstreams = [x for x in item.vstreams()]
+        tstreams = [x for x in item.tstreams()]
+        astreams = [x for x in item.astreams()]
+
         movie.video_streams = vstreams
-        stream_counts.video_stream_count = len(vstreams)
-        LOG.info("Processed {} video streams".format(len(vstreams)))
-
-        tstreams = []
-        for track in item.text_tracks:
-            stream = self.tstream(track)
-            tstreams.append(stream)
-        if tstreams:
-            movie.text_streams = tstreams
-        stream_counts.text_stream_count = len(tstreams)
-        LOG.info("Processed {} text streams".format(len(tstreams)))
-
-        astreams = []
-        for track in item.audio_tracks:
-            stream = self.astream(track)
-            astreams.append(stream)
-
+        movie.text_streams = tstreams
         movie.audio_streams = astreams
+
+        stream_counts.video_stream_count = len(vstreams)
+        LOG.debug("Processed {} video streams".format(len(vstreams)))
+        stream_counts.text_stream_count = len(tstreams)
+        LOG.debug("Processed {} text streams".format(len(tstreams)))
         stream_counts.audio_stream_count = len(astreams)
-        LOG.info("Processed {} audio streams".format(len(astreams)))
+        LOG.debug("Processed {} audio streams".format(len(astreams)))
 
         movie.stream_counts = stream_counts
-        movie.filename = item.general['complete_name']
+        movie.filename = item.general['file_name']
+        movie.filesize = item.general['file_size']
+        movie.dirname = item.general['folder_name']
 
         _imdb = []
         imdb_info = None
+        imdb_search = None
+
         if 'movie_name' in item.general:
-            _imdb = self.imdb.search_movie(item.general['movie_name'])
-        elif 'title' in item.general:
-            _imdb = self.imdb.search_movie(item.general['title'])
-        else:
-            _imdb = self.imdb.search_movie(item.general['file_name'])
+            imdb_search = item.general['movie_name']
+            _imdb = self.imdb.search_movie(imdb_search)
+
+        if 'title' in item.general and not _imdb:
+            imdb_search = item.general['title']
+            _imdb = self.imdb.search_movie(imdb_search)
+
+        if not _imdb:
+            imdb_search = item.general['file_name'].replace('.', ' ')
+            _imdb = self.imdb.search_movie(imdb_search)
+
+        LOG.info("IMDB search: {}".format(imdb_search))
 
         imdb_count = len(_imdb)
         if imdb_count > 1:
-            LOG.warning("Found {} IMDB matches, "
-                        "assuming one".format(imdb_count))
+            LOG.info("Found {} IMDB matches, assuming one".format(imdb_count))
+            # TODO: try to find the right match
             for i in _imdb:
                 if i['kind'] == 'movie':
                     imdb_info = i
@@ -156,5 +104,17 @@ class MovieIndexer:
                 movie.year = imdb_info['year']
             if 'genres' in imdb_info:
                 movie.genre = imdb_info['genres']
+        else:
+            LOG.info("No IMDB match: {}".format(imdb_search))
+            LOG.debug(item.general)
 
-        movie.save()
+        if movie.to_dict() != orig_dict:
+            try:
+                movie.save()
+            except Exception as exc:
+                if LOG.isEnabledFor(logging.INFO):
+                    LOG.exception(exc)
+                else:
+                    LOG.warn(str(exc))
+        else:
+            LOG.debug("Movie unchanged")

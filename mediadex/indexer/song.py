@@ -22,7 +22,6 @@ from mutagen import MutagenError
 from mutagen.easyid3 import EasyID3
 from mutagen.id3._util import ID3NoHeaderError
 
-from mediadex import AudioStream
 from mediadex import ID
 from mediadex import Song
 from mediadex import StreamCounts
@@ -39,32 +38,10 @@ class SongIndexer:
             song = Song()
         orig_dict = song.to_dict()
 
-        song_track = item.audio_tracks.pop()
-        stream = AudioStream()
-
-        if 'duration' in song_track:
-            try:
-                stream.duration = float(song_track['duration'])
-            except ValueError as exc:
-                LOG.excetpion(exc)
-
-        if 'format' in song_track:
-            stream.codec = song_track['format']
-        if 'format_profile' in song_track:
-            stream.codec_profile = song_track['format_profile']
-        if 'channel_s' in song_track:
-            stream.channels = song_track['channel_s']
-        if 'bit_rate' in song_track:
-            stream.bit_rate = song_track['bit_rate']
-        if 'language' in song_track:
-            stream.language = song_track['language']
-        if 'sampling_rate' in song_track:
-            stream.sample_rate = song_track['sampling_rate']
-        if 'internet_media_type' in song_track:
-            stream.mime_type = song_track['internet_media_type']
-
-        song.audio_stream = stream
-        song.filename = item.general['complete_name']
+        song.audio_stream = next(item.astreams())
+        song.filename = item.general['file_name']
+        song.filesize = item.general['file_size']
+        song.dirname = item.general['folder_name']
 
         try:
             info = EasyID3(song.filename)
@@ -88,7 +65,10 @@ class SongIndexer:
         except ID3NoHeaderError:
             pass
         except MutagenError as exc:
-            LOG.exception(exc)
+            if LOG.isEnabledFor(logging.INFO):
+                LOG.exception(exc)
+            else:
+                LOG.warn(str(exc))
 
         stream_counts = StreamCounts()
         stream_counts.audio_stream_count = 1
@@ -97,6 +77,12 @@ class SongIndexer:
         song.stream_counts = stream_counts
 
         if song.to_dict() != orig_dict:
-            song.save()
+            try:
+                song.save()
+            except Exception as exc:
+                if LOG.isEnabledFor(logging.INFO):
+                    LOG.exception(exc)
+                else:
+                    LOG.warn(str(exc))
         else:
             LOG.debug("Song unchanged")
