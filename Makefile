@@ -1,33 +1,52 @@
 .PHONY: all
-all: test install
+all: install
 
 .venv:
 	virtualenv --python=python3 .venv
+	$(MAKE) refresh
+
+.PHONY: pip
+pip: .venv
+	.venv/bin/pip install -U pip
 
 .PHONY: deps
-deps: .venv
+deps: .venv requirements.txt
 	.venv/bin/pip install -U -r requirements.txt
 
 .PHONY: tdeps
-tdeps: .venv
+tdeps: .venv test-requirements.txt
 	.venv/bin/pip install -U -r test-requirements.txt
 
-.PHONY: test
-test: tdeps
+.PHONY: refresh
+refresh: pip deps tdeps
+
+PY_FILES = $(shell find mediadex/ -type f -name '*.py')
+.venv/bin/mediadex: .venv $(PY_FILES)
 	.venv/bin/tox -e pep8
+	.venv/bin/pip install --no-deps .
 
 .PHONY: install
-install: deps
-	.venv/bin/pip install .
+install: .venv/bin/mediadex
+
+.PHONY: full
+full: refresh build
 
 .PHONY: clean
 clean:
 	.venv/bin/python3 setup.py clean
 
+.PHONY: deepclean
+deepclean:
+	rm -r .venv
+
+# ElasticSearch purge for schema changes
+.PHONY: purge
+purge: purge-music purge-movies
+
 .PHONY: purge-movies
 purge-movies:
-	curl -XDELETE http://localhost:9200/movies
+	curl -XDELETE http://localhost:9200/movies?pretty
 
 .PHONY: purge-music
 purge-music:
-	curl -XDELETE http://localhost:9200/music
+	curl -XDELETE http://localhost:9200/music?pretty
