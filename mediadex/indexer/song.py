@@ -84,5 +84,6 @@ class SongIndexer:
                     LOG.exception(exc)
                 else:
                     LOG.warn(str(exc))
+            LOG.info("Song updated")
         else:
             LOG.debug("Song unchanged")

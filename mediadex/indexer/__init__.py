@@ -17,9 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import logging
-import os.path
 
-from elasticsearch_dsl import connections
 from elasticsearch_dsl import FacetedSearch
 from elasticsearch_dsl import TermsFacet
 
@@ -73,21 +71,24 @@ class SongListFacet(FileListFacet):
 
 
 class Indexer:
-    def __init__(self, host):
-        connections.create_connection(hosts=[host], timeout=10)
+    def __init__(self):
         Movie.init()
         Song.init()
         self.mi = MovieIndexer()
         self.si = SongIndexer()
 
-    def index(self, data):
+    def index(self, data, path):
         item = Item(data)
 
         # LOG.debug('keys in item.general: {}'.format(item.general.keys()))
-        filename = item.general['file_name']
-        dirname = item.general['folder_name']
+        _full_name = item.general['complete_name']
+        dirname = path.rstrip('/')
+        filename = _full_name.replace(path, '').lstrip('/')
+        item.dirname = dirname
+        item.filename = filename
 
         if item.dex_type == 'empty':
+            LOG.warn("No streams detected for {}".format(filename))
             return
 
         elif item.dex_type == 'unknown':
@@ -100,8 +101,8 @@ class Indexer:
         elif item.dex_type == 'song':
             s = Song.search()
             LOG.info("Processing Song for {}".format(filename))
-            r = s.query('match', filename=filename)\
-                 .query('match', dirname=dirname).execute()
+            r = s.filter('term', filename=filename)\
+                 .filter('term', dirname=dirname).execute()
 
             if r.hits.total.value == 0:
                 LOG.debug("Indexing new Song for {}".format(filename))
@@ -114,14 +115,14 @@ class Indexer:
                 LOG.error("Found {} existing Songs for {}".format(
                         r.hits.total.value, filename))
                 for h in r.hits:
-                    LOG.debug(h.filename)
+                    LOG.debug("{}/{}".format(h.dirname, h.filename))
                 raise IndexerException("Multiple filename matches")
 
         elif item.dex_type == 'movie':
             s = Movie.search()
             LOG.info("Processing Movie for {}".format(filename))
-            r = s.query('match', filename=filename)\
-                 .query('match', dirname=dirname).execute()
+            r = s.filter('term', filename=filename)\
+                 .filter('term', dirname=dirname).execute()
 
             if r.hits.total.value == 0:
                 LOG.debug("Indexing new Movie for {}".format(filename))
@@ -134,7 +135,7 @@ class Indexer:
                 LOG.error("Found {} existing Movies for {}".format(
                         r.hits.total.value, filename))
                 for h in r.hits:
-                    LOG.debug(h.filename)
+                    LOG.debug("{}/{}".format(h.dirname, h.filename))
                 raise IndexerException("Multiple filename matches")
 
     def index_song(self, item, song=None):
@@ -142,50 +143,3 @@ class Indexer:
 
     def index_movie(self, item, movie=None):
         self.mi.index(item, movie)
-
-    def purge_movies(self):
-        nef = []  # non-exsistent files
-        facet = MovieListFacet()
-        fcount = facet.count()
-        LOG.debug('MovieListFacet found {} hits'.format(fcount))
-
-        if fcount > 10000:
-            LOG.warning('More than 10000 hits, truncating')
-            fcount = 10000
-
-        facet.params(size=fcount)
-        result = facet.execute()
-        for (filename, _, _) in result.facets.filenames:
-            if not os.path.exists(filename):
-                LOG.info('Found non-existent file: {}'.format(filename))
-                nef.append(filename)
-
-        for f in nef:
-            LOG.info('Deleting entries for {}'.format(f))
-            Movie.search().query('match', filename=f).delete()
-
-    def purge_songs(self):
-        nef = []  # non-exsistent files
-        facet = SongListFacet()
-        fcount = facet.count()
-        LOG.debug('SongListFacet found {} hits'.format(fcount))
-
-        if fcount > 10000:
-            LOG.warning('More than 10000 hits, truncating')
-            fcount = 10000
-
-        facet.params(size=fcount)
-        result = facet.execute()
-        for (filename, _, _) in result.facets.filenames:
-            if not os.path.exists(filename):
-                LOG.info('Found non-existent file: {}'.format(filename))
-                nef.append(filename)
-
-        for f in nef:
-            LOG.info('Deleting entries for {}'.format(f))
-            Song.search().query('match', filename=f).delete()
-
-    def purge(self):
-        self.purge_movies()
-        self.purge_songs()
-        return 0

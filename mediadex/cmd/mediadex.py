@@ -23,10 +23,13 @@ import os
 
 import chardet
 import yaml
+from elasticsearch_dsl import connections
 from pymediainfo import MediaInfo
 
 from mediadex.indexer import Indexer
 from mediadex.indexer import IndexerException
+from mediadex.purger import MoviePurger
+from mediadex.purger import SongPurger
 
 
 class App:
@@ -81,21 +84,19 @@ class App:
         sh.setFormatter(logging.Formatter(fmt))
         root_log.addHandler(sh)
 
-        log = logging.getLogger('elasticsearch')
-        log.setLevel(logging.WARNING)
-
-        log = logging.getLogger('imdb')
-        log.setLevel(logging.WARNING)
+        for lib in ['elasticsearch', 'imdb', 'imdbpy', 'urllib3']:
+            log = logging.getLogger(lib)
+            log.setLevel(logging.WARNING)
 
         self.log = logging.getLogger('mediadex')
         self.log.setLevel(level)
 
-    def index(self, data):
+    def index(self, data, path):
         if self.args.dry_run:
             self.log.info(yaml.dump(data))
         else:
             try:
-                self.dex.index(data['tracks'])
+                self.dex.index(data['tracks'], path)
             except IndexerException as exc:
                 if self.log.isEnabledFor(logging.INFO):
                     self.log.exception(exc)
@@ -105,7 +106,7 @@ class App:
                 return 1
         return 0
 
-    def open_file(self, f):
+    def open_file(self, f, p):
         info = {}
 
         if self.args.today:
@@ -138,10 +139,9 @@ class App:
         finally:
             if not info:
                 _f = f.encode('utf-8', 'surrogateescape')
-                self.log.error("Could not read: {}".format(_f))
-                return 1
+                raise IOError("Could not open {}".format(_f))
 
-        return self.index(info)
+        return self.index(info, p)
 
     def walk_paths(self):
         retval = 0
@@ -150,7 +150,7 @@ class App:
                 for _file in _files:
                     fp = os.path.join(_top, _file)
                     try:
-                        retval += self.open_file(fp)
+                        retval += self.open_file(fp, path)
                     except Exception as exc:
                         if self.log.isEnabledFor(logging.INFO):
                             self.log.exception(exc)
@@ -162,7 +162,9 @@ class App:
     def purge(self):
         retval = 0
         try:
-            retval += self.dex.purge()
+            sp = SongPurger()
+            mp = MoviePurger()
+            retval += sp.purge() + mp.purge()
         except Exception as exc:
             self.log.exception(exc)
             retval += 1
@@ -179,7 +181,8 @@ class App:
             self.setup_logging(level=logging.DEBUG)
 
         if not self.args.dry_run:
-            self.dex = Indexer(self.args.host)
+            connections.create_connection(hosts=[self.args.host], timeout=11)
+            self.dex = Indexer()
             if self.args.purge:
                 return self.purge()
 

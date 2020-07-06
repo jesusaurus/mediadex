@@ -100,6 +100,9 @@ class Item:
 
             self.base_track(t, stream)
 
+            if 'encoding' in t:
+                stream.charset = t['encoding']
+
             yield stream
 
     def vstreams(self):

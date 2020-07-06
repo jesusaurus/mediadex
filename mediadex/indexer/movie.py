@@ -30,10 +30,8 @@ class MovieIndexer:
     def __init__(self):
         self.imdb = IMDb()
 
-    def index(self, item, movie=None):
-        if movie is None:
-            movie = Movie()
-        orig_dict = movie.to_dict()
+    def index(self, item, existing=None):
+        movie = Movie()
 
         stream_counts = StreamCounts()
 
@@ -53,9 +51,9 @@ class MovieIndexer:
         LOG.debug("Processed {} audio streams".format(len(astreams)))
 
         movie.stream_counts = stream_counts
-        movie.filename = item.general['file_name']
+        movie.dirname = item.dirname
+        movie.filename = item.filename
         movie.filesize = item.general['file_size']
-        movie.dirname = item.general['folder_name']
 
         _imdb = []
         imdb_info = None
@@ -64,16 +62,17 @@ class MovieIndexer:
         if 'movie_name' in item.general:
             imdb_search = item.general['movie_name']
             _imdb = self.imdb.search_movie(imdb_search)
+            LOG.debug("IMDB search: {}".format(imdb_search))
 
         if 'title' in item.general and not _imdb:
             imdb_search = item.general['title']
             _imdb = self.imdb.search_movie(imdb_search)
+            LOG.debug("IMDB search: {}".format(imdb_search))
 
         if not _imdb:
             imdb_search = item.general['file_name'].replace('.', ' ')
             _imdb = self.imdb.search_movie(imdb_search)
-
-        LOG.info("IMDB search: {}".format(imdb_search))
+            LOG.debug("IMDB search: {}".format(imdb_search))
 
         imdb_count = len(_imdb)
         if imdb_count > 1:
@@ -108,13 +107,19 @@ class MovieIndexer:
             LOG.info("No IMDB match: {}".format(imdb_search))
             LOG.debug(item.general)
 
-        if movie.to_dict() != orig_dict:
-            try:
+        try:
+            if existing is None:
                 movie.save()
-            except Exception as exc:
-                if LOG.isEnabledFor(logging.INFO):
-                    LOG.exception(exc)
-                else:
-                    LOG.warn(str(exc))
-        else:
-            LOG.debug("Movie unchanged")
+                LOG.debug("Movie added")
+            elif existing.to_dict() == movie.to_dict():
+                LOG.debug("Movie unchanged")
+            else:
+                existing.delete()
+                movie.save()
+                LOG.debug("Movie updated")
+
+        except Exception as exc:
+            if LOG.isEnabledFor(logging.INFO):
+                LOG.exception(exc)
+            else:
+                LOG.warn(str(exc))

@@ -40,13 +40,13 @@ class StreamCounts(InnerDoc):
 
 
 class Media(Document):
-    title = Keyword()
+    title = Text()
     year = Keyword()
     genre = Keyword(multi=True)
     stream_counts = Object(StreamCounts)
     container = Keyword()
-    dirname = Text()
-    filename = Text()
+    dirname = Keyword()
+    filename = Keyword()
     filesize = Long()
 
 
@@ -59,29 +59,31 @@ class Stream(InnerDoc):
 
 
 class TextStream(Stream):
-    pass
+    charset = Keyword()
 
 
-class AudioStream(Stream):
-    channels = Keyword()
-    bit_rate = Keyword()
-    sample_rate = Keyword()
-
-
-class VideoStream(Stream):
+class BitStream(Stream):
     bit_rate = Long()
     bit_depth = Integer()
+    sample_rate = Integer()
+
+
+class AudioStream(BitStream):
+    channels = Keyword()
+
+
+class VideoStream(BitStream):
     resolution = Keyword()
     height = Integer()
     width = Integer()
 
 
 class ID(InnerDoc):
-    acoustid_fingerprint = Text()
-    acoustid_id = Text()
+    acoustid_fingerprint = Keyword()
+    acoustid_id = Keyword()
 
-    musicip_fingerprint = Text()
-    musicip_puid = Text()
+    musicip_fingerprint = Keyword()
+    musicip_puid = Keyword()
 
 
 class Song(Media):
@@ -91,24 +93,24 @@ class Song(Media):
     album = Text()
     albumartist = Text()
     arranger = Keyword()
-    artist = Keyword()
+    artist = Text()
     bpm = Float()
-    compilation = Text()
-    composer = Keyword()
-    conductor = Keyword()
-    discnumber = Text()
+    compilation = Keyword()
+    composer = Text()
+    conductor = Text()
+    discnumber = Keyword()
     mood = Keyword()
-    performer = Keyword()
-    tracknumber = Text()
+    performer = Text()
+    tracknumber = Keyword()
 
     class Index(_Index):
         name = 'music'
 
 
 class Cinema(Media):
-    cast = Keyword(multi=True)
-    director = Keyword(multi=True)
-    writer = Keyword(multi=True)
+    cast = Text(multi=True)
+    director = Text(multi=True)
+    writer = Text(multi=True)
 
     audio_streams = Object(AudioStream, multi=True)
     text_streams = Object(TextStream, multi=True)
