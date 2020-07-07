@@ -35,7 +35,8 @@ class Purger:
             fullpath = os.path.join(h.dirname, h.filename)
             if not os.path.exists(fullpath):
                 try:
-                    LOG.warn('Purging {} for {}'.format(h.id, fullpath))
+                    _id = h.meta._d_['id']
+                    LOG.warn('Purging {} for {}'.format(_id, fullpath))
                     h.delete()
                 except Exception as exc:
                     LOG.exception(exc)

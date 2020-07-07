@@ -104,7 +104,7 @@ class MovieIndexer:
             if 'genres' in imdb_info:
                 movie.genre = imdb_info['genres']
         else:
-            LOG.info("No IMDB match: {}".format(imdb_search))
+            LOG.warn("No IMDB match: {}".format(imdb_search))
             LOG.debug(item.general)
 
         try:
