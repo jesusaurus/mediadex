@@ -1,6 +1,33 @@
 CHANGES
 =======
 
+* More error checking
+
+0.2.1
+-----
+
+* Fix purging
+
+0.2.0
+-----
+
+* Several updates
+* Now THATS what I call a Makefile!
+* Move Item to its own module
+* Too Many Changes
+* General Makefile improvements
+* Try to skip unchanged data
+* Improve logging
+* Improve command-line options
+* Add makefile target for purging ES data
+* Restructure Song metadata
+* Get movie info from IMDB
+* Load ID3 data using mutagen
+* Create initial Makefile
+* Improve exception handling
+* Add initial chardet support
+* Minor tweak to the data structure
+
 0.1.1
 -----
 

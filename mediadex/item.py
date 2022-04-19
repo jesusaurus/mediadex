@@ -87,8 +87,18 @@ class Item:
 
             if 'channel_s' in t:
                 stream.channels = t['channel_s']
+
             if 'bit_rate' in t:
-                stream.bit_rate = t['bit_rate']
+                if t['bit_rate'] == 'Open':
+                    continue
+
+                try:
+                    stream.bit_rate = int(t['bit_rate'])
+                except ValueError as verr:
+                    LOG.warn(str(verr))
+                except Exception as exc:
+                    LOG.exception(exc)
+
             if 'sampling_rate' in t:
                 stream.sample_rate = t['sampling_rate']
 
@@ -112,10 +122,24 @@ class Item:
             self.base_track(t, stream)
 
             if 'bit_rate' in t:
-                stream.bit_rate = t['bit_rate']
+                if t['bit_rate'] == 'Open':
+                    continue
+
+                try:
+                    stream.bit_rate = int(t['bit_rate'])
+                except ValueError as verr:
+                    LOG.warn(str(verr))
+                except Exception as exc:
+                    LOG.exception(exc)
 
             if 'bit_depth' in t:
-                stream.bit_depth = t['bit_depth']
+                try:
+                    stream.bit_depth = int(t['bit_depth'])
+                except Exception as exc:
+                    if LOG.isEnabledFor(logging.INFO):
+                        LOG.exception(exc)
+                    else:
+                        LOG.warn(str(exc))
 
             if 'height' in t and 'width' in t:
                 try:

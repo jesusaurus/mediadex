@@ -7,15 +7,15 @@ all: install
 
 .PHONY: pip
 pip: .venv
-	.venv/bin/pip install -U pip
+	.venv/bin/pip install --upgrade pip wheel
 
 .PHONY: deps
 deps: .venv requirements.txt
-	.venv/bin/pip install -U -r requirements.txt
+	.venv/bin/pip install --upgrade --upgrade-strategy eager -r requirements.txt
 
 .PHONY: tdeps
 tdeps: .venv test-requirements.txt
-	.venv/bin/pip install -U -r test-requirements.txt
+	.venv/bin/pip install --upgrade --upgrade-strategy eager -r test-requirements.txt
 
 .PHONY: refresh
 refresh: pip deps tdeps
