@@ -4,5 +4,5 @@ elasticsearch >=7.10,<7.11
 PyYAML
 chardet
 mutagen
-IMDbPY
+cinemagoer
 python-dateutil

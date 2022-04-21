@@ -19,7 +19,7 @@
 import logging
 import re
 
-from imdb import IMDb
+from imdb import Cinemagoer
 
 from mediadex import Movie
 from mediadex import StreamCounts
@@ -29,7 +29,7 @@ LOG = logging.getLogger('mediadex.indexer.movie')
 
 class MovieIndexer:
     def __init__(self):
-        self.imdb = IMDb()
+        self.imdb = Cinemagoer()
 
     def index(self, item, existing=None):
         movie = Movie()

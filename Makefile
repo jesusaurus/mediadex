@@ -21,7 +21,7 @@ tdeps: .venv test-requirements.txt
 refresh: pip deps tdeps
 
 PY_FILES = $(shell find mediadex/ -type f -name '*.py')
-.venv/bin/mediadex: .venv $(PY_FILES)
+.venv/bin/mediadex: .venv setup.py setup.cfg $(PY_FILES) pyproject.toml
 	.venv/bin/tox -e pep8
 	.venv/bin/pip install --no-deps .
 
