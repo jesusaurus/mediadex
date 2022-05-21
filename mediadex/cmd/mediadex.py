@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-# Mediadex: Index media metadata into elasticsearch
-# Copyright (C) 2019  K Jonathan Harker
+# Mediadex: Index media metadata into opensearch
+# Copyright (C) 2019-2022  K Jonathan Harker
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@ import os
 
 import chardet
 import yaml
-from elasticsearch_dsl import connections
+from opensearch_dsl import connections
 from pymediainfo import MediaInfo
 
 from mediadex.indexer import Indexer
@@ -37,6 +37,7 @@ class App:
         self.args = None
         self.dex = None
         self.log = None
+        self.client = None
 
     def parse_args(self):
         parser = argparse.ArgumentParser()
@@ -55,23 +56,28 @@ class App:
                             dest='purge',
                             action='store_true',
                             help='Scan for deleted files and remove '
-                            'their entries from elasticsearch')
+                            'their entries from opensearch')
 
         parser.add_argument('--today',
                             dest='today',
                             action='store_true',
                             help='only scan recent files')
 
-        parser.add_argument('-es', '--elasticsearch-host',
+        parser.add_argument('-H', '--opensearch-host',
                             dest='host',
                             action='store', default='localhost:9200',
-                            help='elasticsearch host to connect to')
+                            help='opensearch host to connect to')
 
-        parser.add_argument('-dr', '--dry-run',
+        parser.add_argument('--opensearch-user-pass',
+                            dest='userpass',
+                            action='store', default='admin:admin',
+                            help='opensearch host to connect to')
+
+        parser.add_argument('-x', '--dry-run',
                             dest='dry_run',
                             action='store_true',
                             help='write to stdout as yaml instead of '
-                            'indexing into elasticsearch')
+                            'indexing into opensearch')
 
         self.args = parser.parse_args()
 
@@ -84,7 +90,7 @@ class App:
         sh.setFormatter(logging.Formatter(fmt))
         root_log.addHandler(sh)
 
-        for lib in ['elasticsearch', 'imdb', 'imdbpy', 'urllib3']:
+        for lib in ['opensearch', 'imdb', 'imdbpy', 'urllib3']:
             log = logging.getLogger(lib)
             log.setLevel(logging.WARNING)
 
@@ -181,7 +187,21 @@ class App:
             self.setup_logging(level=logging.DEBUG)
 
         if not self.args.dry_run:
-            connections.create_connection(hosts=[self.args.host], timeout=11)
+            host, port = self.args.host.split(':')
+            user, pw = self.args.userpass.split(':')
+
+            # XXX need better pki
+            import urllib3
+            urllib3.disable_warnings()
+
+            connections.create_connection(
+              hosts=[{'host': host, 'port': port}],
+              http_auth=(user, pw),
+              use_ssl=True,
+              verify_certs=False,
+              ssl_assert_hostname=False,
+            )
+
             self.dex = Indexer()
             if self.args.purge:
                 return self.purge()

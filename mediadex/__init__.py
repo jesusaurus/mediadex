@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-# Mediadex: Index media metadata into elasticsearch
-# Copyright (C) 2019  K Jonathan Harker
+# Mediadex: Index media metadata into opensearch
+# Copyright (C) 2019-2022  K Jonathan Harker
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,14 +16,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from elasticsearch_dsl import Document
-from elasticsearch_dsl import Float
-from elasticsearch_dsl import InnerDoc
-from elasticsearch_dsl import Integer
-from elasticsearch_dsl import Keyword
-from elasticsearch_dsl import Long
-from elasticsearch_dsl import Object
-from elasticsearch_dsl import Text
+from opensearch_dsl import Document
+from opensearch_dsl import Float
+from opensearch_dsl import InnerDoc
+from opensearch_dsl import Integer
+from opensearch_dsl import Keyword
+from opensearch_dsl import Long
+from opensearch_dsl import Object
+from opensearch_dsl import Text
 
 
 class _Index:

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-# Mediadex: Index media metadata into elasticsearch
-# Copyright (C) 2019  K Jonathan Harker
+# Mediadex: Index media metadata into opensearch
+# Copyright (C) 2019-2022  K Jonathan Harker
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

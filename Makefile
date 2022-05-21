@@ -29,7 +29,7 @@ PY_FILES = $(shell find mediadex/ -type f -name '*.py')
 install: .venv/bin/mediadex
 
 .PHONY: full
-full: refresh build
+full: refresh install
 
 .PHONY: clean
 clean:

@@ -1,8 +1,8 @@
 pymediainfo
-elasticsearch-dsl >=7.0,<8.0
-elasticsearch >=7.10,<7.11
+opensearch-dsl
 PyYAML
 chardet
 mutagen
 cinemagoer
 python-dateutil
+requests

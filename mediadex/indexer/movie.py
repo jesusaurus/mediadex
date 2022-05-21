@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-# Mediadex: Index media metadata into elasticsearch
-# Copyright (C) 2019  K Jonathan Harker
+# Mediadex: Index media metadata into opensearch
+# Copyright (C) 2019-2022  K Jonathan Harker
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -158,18 +158,28 @@ class MovieIndexer:
             LOG.info("IMDB Title: {}".format(imdb_info['title']))
             self.imdb.update(imdb_info)
 
-            if 'cast' in imdb_info:
-                movie.cast = [x['name'] for x in imdb_info['cast']]
-            if 'director' in imdb_info:
-                movie.director = [x['name'] for x in imdb_info['director']]
-            if 'writer' in imdb_info:
-                movie.writer = [x['name'] for x in imdb_info['writer']]
-            if 'title' in imdb_info:
-                movie.title = imdb_info['title']
-            if 'year' in imdb_info:
-                movie.year = imdb_info['year']
-            if 'genres' in imdb_info:
-                movie.genre = imdb_info['genres']
+            try:
+                if 'cast' in imdb_info:
+                    movie.cast = [
+                        x['name'] for x in imdb_info['cast'] if 'name' in x
+                    ]
+                if 'director' in imdb_info:
+                    movie.director = [
+                        x['name'] for x in imdb_info['director'] if 'name' in x
+                    ]
+                if 'writer' in imdb_info:
+                    movie.writer = [
+                        x['name'] for x in imdb_info['writer'] if 'name' in x
+                    ]
+                if 'title' in imdb_info:
+                    movie.title = imdb_info['title']
+                if 'year' in imdb_info:
+                    movie.year = imdb_info['year']
+                if 'genres' in imdb_info:
+                    movie.genre = imdb_info['genres']
+            except KeyError as exc:
+                LOG.debug(imdb_info.__dict__)
+                LOG.exception(exc)
 
         try:
             if existing is None:
