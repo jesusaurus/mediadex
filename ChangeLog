@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* Add --insecure parameter
 * Add release workflow
 
 0.3.0

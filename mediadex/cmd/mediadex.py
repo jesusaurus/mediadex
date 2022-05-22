@@ -73,6 +73,11 @@ class App:
                             action='store', default='admin:admin',
                             help='opensearch host to connect to')
 
+        parser.add_argument('--insecure',
+                            dest='insecure',
+                            action='store_true',
+                            help='ignore tls failures')
+
         parser.add_argument('-x', '--dry-run',
                             dest='dry_run',
                             action='store_true',
@@ -190,16 +195,18 @@ class App:
             host, port = self.args.host.split(':')
             user, pw = self.args.userpass.split(':')
 
-            # XXX need better pki
-            import urllib3
-            urllib3.disable_warnings()
+            secure=True
+            if self.args.insecure:
+                import urllib3
+                urllib3.disable_warnings()
+                secure=False
 
             connections.create_connection(
               hosts=[{'host': host, 'port': port}],
               http_auth=(user, pw),
               use_ssl=True,
-              verify_certs=False,
-              ssl_assert_hostname=False,
+              verify_certs=secure,
+              ssl_assert_hostname=secure,
             )
 
             self.dex = Indexer()
