@@ -77,15 +77,23 @@ class Indexer:
         self.mi = MovieIndexer()
         self.si = SongIndexer()
 
-    def index(self, data, path):
-        item = Item(data)
+    def index(self, info):
+        LOG.debug('Hashing file')
+        info.hashFile()
 
-        # LOG.debug('keys in item.general: {}'.format(item.general.keys()))
-        _full_name = item.general['complete_name']
-        dirname = path.rstrip('/')
-        filename = _full_name.replace(path, '').lstrip('/')
+        LOG.debug('Calling mediainfo')
+        info.parseMediaInfo()
+
+        data = info.dumpData()
+        item = Item(data['mediainfo']['tracks'])
+
+        dirname = data['basepath'].rstrip('/')
         item.dirname = dirname
+
+        filename = data['fullpath'].replace(dirname, '').lstrip('/')
         item.filename = filename
+
+        item.fingerprint = data['fingerprint']
 
         if item.dex_type == 'empty':
             LOG.warn("No streams detected for {}".format(filename))
@@ -101,8 +109,7 @@ class Indexer:
         elif item.dex_type == 'song':
             s = Song.search()
             LOG.info("Processing Song for {}".format(filename))
-            r = s.filter('term', filename=filename)\
-                 .filter('term', dirname=dirname).execute()
+            r = s.filter('term', fingerprint=item.fingerprint).execute()
 
             if r.hits.total.value == 0:
                 LOG.debug("Indexing new Song for {}".format(filename))
@@ -120,9 +127,8 @@ class Indexer:
 
         elif item.dex_type == 'movie':
             s = Movie.search()
-            LOG.info("Processing Movie for {}".format(filename))
-            r = s.filter('term', filename=filename)\
-                 .filter('term', dirname=dirname).execute()
+            LOG.info(f"Processing Movie for {filename} ({item.fingerprint})")
+            r = s.filter('term', fingerprint=item.fingerprint).execute()
 
             if r.hits.total.value == 0:
                 LOG.debug("Indexing new Movie for {}".format(filename))

@@ -48,6 +48,7 @@ class Media(Document):
     dirname = Keyword()
     filename = Keyword()
     filesize = Long()
+    fingerprint = Text()
 
 
 class Stream(InnerDoc):

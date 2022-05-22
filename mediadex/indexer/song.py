@@ -39,9 +39,10 @@ class SongIndexer:
         orig_dict = song.to_dict()
 
         song.audio_stream = next(item.astreams())
-        song.filename = item.general['file_name']
+        song.dirname = item.dirname
+        song.filename = item.filename
         song.filesize = item.general['file_size']
-        song.dirname = item.general['folder_name']
+        song.fingerprint = item.fingerprint
 
         try:
             info = EasyID3(song.filename)

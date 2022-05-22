@@ -56,6 +56,7 @@ class MovieIndexer:
         movie.dirname = item.dirname
         movie.filename = item.filename
         movie.filesize = item.general['file_size']
+        movie.fingerprint = item.fingerprint
 
         if existing:
             # Assume imdb hasn't changed anything

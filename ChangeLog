@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* Rely on file hash for uniqueness
 * Add --insecure parameter
 * Add release workflow
 

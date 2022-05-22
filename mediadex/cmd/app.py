@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 # Mediadex: Index media metadata into opensearch
-# Copyright (C) 2019-2022  K Jonathan Harker
+# Copyright (C) 2019-2022  Joni Harker
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,16 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 import argparse
 import datetime
 import logging
 import os
 
-import chardet
 import yaml
 from opensearch_dsl import connections
-from pymediainfo import MediaInfo
 
+from mediadex.cmd.fileinfo import FileInfo
 from mediadex.indexer import Indexer
 from mediadex.indexer import IndexerException
 from mediadex.purger import MoviePurger
@@ -102,57 +102,33 @@ class App:
         self.log = logging.getLogger('mediadex')
         self.log.setLevel(level)
 
-    def index(self, data, path):
+    def index(self, fi):
         if self.args.dry_run:
-            self.log.info(yaml.dump(data))
+            self.log.info(yaml.dump(fi))
         else:
             try:
-                self.dex.index(data['tracks'], path)
+                self.dex.index(fi)
             except IndexerException as exc:
                 if self.log.isEnabledFor(logging.INFO):
                     self.log.exception(exc)
                 else:
                     self.log.warn(str(exc))
-                self.log.debug(yaml.dump(data))
+                self.log.debug(yaml.dump(fi))
                 return 1
         return 0
 
-    def open_file(self, f, p):
-        info = {}
+    def open_file(self, fp, bp):
+        info = FileInfo(fp, bp)
 
         if self.args.today:
-            _stat = os.stat(f)
+            _stat = os.stat(fp)
             mtime = datetime.datetime.fromtimestamp(_stat.st_mtime)
             diff = datetime.datetime.now() - mtime
             if diff > datetime.timedelta(days=1):
-                self.log.debug('Skipping {} due to timestamp'.format(f))
+                self.log.debug('Skipping {} due to timestamp'.format(fp))
                 return 0
 
-        try:
-            info = MediaInfo.parse(f).to_data()
-        except FileNotFoundError:
-            _enc = f.encode('utf-8', 'surrogateescape')
-            charset = chardet.detect(f).get('encoding')
-            self.log.info("chardet found: {}".format(charset))
-
-            try:
-                _f = _enc.decode(charset)
-                info = MediaInfo.parse(_f).to_data()
-            except FileNotFoundError:
-                self.log.warning("chardet failure: {}".format(_f))
-
-        except Exception as exc:
-            if self.log.isEnabledFor(logging.INFO):
-                self.log.exception(exc)
-            else:
-                self.log.warn(str(exc))
-
-        finally:
-            if not info:
-                _f = f.encode('utf-8', 'surrogateescape')
-                raise IOError("Could not open {}".format(_f))
-
-        return self.index(info, p)
+        return self.index(info)
 
     def walk_paths(self):
         retval = 0
@@ -195,11 +171,11 @@ class App:
             host, port = self.args.host.split(':')
             user, pw = self.args.userpass.split(':')
 
-            secure=True
+            secure = True
             if self.args.insecure:
                 import urllib3
                 urllib3.disable_warnings()
-                secure=False
+                secure = False
 
             connections.create_connection(
               hosts=[{'host': host, 'port': port}],
@@ -214,8 +190,3 @@ class App:
                 return self.purge()
 
         return self.walk_paths()
-
-
-def main():
-    app = App()
-    return app.run()

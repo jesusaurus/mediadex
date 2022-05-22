@@ -1,5 +1,7 @@
-.PHONY: all
-all: install
+PY_FILES = $(shell find mediadex/ -type f -name '*.py')
+
+.PHONY: install
+install: test .venv/bin/mediadex
 
 .venv:
 	virtualenv --python=python3 .venv
@@ -20,16 +22,15 @@ tdeps: .venv test-requirements.txt
 .PHONY: refresh
 refresh: pip deps tdeps
 
-PY_FILES = $(shell find mediadex/ -type f -name '*.py')
-.venv/bin/mediadex: .venv setup.py setup.cfg $(PY_FILES) pyproject.toml
+.PHONY: test
+test: .venv pyproject.toml setup.cfg setup.py $(PY_FILES)
 	.venv/bin/tox -e pep8
+
+.venv/bin/mediadex: .venv pyproject.toml setup.cfg setup.py $(PY_FILES)
 	.venv/bin/pip install --no-deps .
 
-.PHONY: install
-install: .venv/bin/mediadex
-
-.PHONY: full
-full: refresh install
+.PHONY: all
+all: refresh install
 
 .PHONY: clean
 clean:
