@@ -71,7 +71,7 @@ class MovieIndexer:
             # build a list of potential movie names
             # order matters
             #   title + subtitle (no year)
-            #   title
+            #   title + year
             #   filename
             #   subtitle
             #   container movie_name
@@ -86,13 +86,6 @@ class MovieIndexer:
             file_subtitle = None
             file_re = re.compile(r'([^.]+ )+(\d{4})( [^.]*)*')
             file_match = file_re.match(file_sanitized)
-
-            # check container metadata
-            if 'movie_name' in item.general:
-                search_strings.append(item.general['movie_name'])
-
-            if 'title' in item.general:
-                search_strings.append(item.general['title'])
 
             # parse re results
             if file_match:
@@ -110,52 +103,47 @@ class MovieIndexer:
                 )
 
                 if file_subtitle:
-                    full_title = '{} {}'.format(file_title, file_subtitle)
+                    full_title = '{}: {}'.format(file_title, file_subtitle)
                     search_strings.append(full_title)
 
-                search_strings.append(file_title)
-
-                if file_subtitle:
-                    search_strings.append(file_subtitle)
+                title_year = '{} {}'.format(file_title, file_year)
+                search_strings.append(title_year)
 
             search_strings.append(file_sanitized)
 
+            if file_subtitle:
+                search_strings.append(file_subtitle)
+
+            # check container metadata
+            if 'movie_name' in item.general:
+                search_strings.append(item.general['movie_name'])
+
+            if 'title' in item.general:
+                search_strings.append(item.general['title'])
+
             # collate search string results
-
-            imdb_results = {}
             best_title = ''
-            best_imdb = []
-            imdb_info = {}
+            imdb_info = None
 
-            LOG.debug(search_strings)
+            LOG.debug(f"Searching through: {search_strings}")
             for imdb_search in search_strings:
-                LOG.debug("IMDB search: {}".format(imdb_search))
+                LOG.debug("Searching for: {}".format(imdb_search))
                 if not imdb_search:
                     continue
+
                 _imdb = self.imdb.search_movie(imdb_search)
                 if _imdb:
-                    imdb_results[imdb_search] = _imdb
+                    LOG.debug("Found IMDB info: {}".format(_imdb))
+                    best_title = imdb_search
+                    imdb_info = _imdb[0]
+                    break
 
-            title_list = imdb_results.keys()
-            for title in title_list:
-                if not best_imdb:
-                    best_title = title
-                    best_imdb = imdb_results[title]
-
-            found_count = len(title_list)
-            if found_count == 0:
+            if imdb_info is None:
                 LOG.warn("No IMDB match: {}".format(search_strings))
                 LOG.debug(item.general)
                 return
-            elif found_count == 1:
-                LOG.debug("One IMDB match: {}".format(best_title))
-                imdb_info = best_imdb[0]
-                LOG.debug(item.general)
-            else:
-                LOG.info("Best IMDB match: {}".format(best_title))
-                imdb_info = best_imdb[0]
-                LOG.debug(item.general)
 
+            LOG.info("Found match for: {}".format(best_title))
             LOG.info("IMDB Title: {}".format(imdb_info['title']))
             self.imdb.update(imdb_info)
 

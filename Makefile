@@ -46,8 +46,8 @@ purge: purge-music purge-movies
 
 .PHONY: purge-movies
 purge-movies:
-	curl -XDELETE http://localhost:9200/movies?pretty
+	curl -XDELETE http://localhost:9200/movies?pretty || true
 
 .PHONY: purge-music
 purge-music:
-	curl -XDELETE http://localhost:9200/music?pretty
+	curl -XDELETE http://localhost:9200/music?pretty || true

@@ -43,13 +43,17 @@ class Item:
         self.video_tracks = vtracks
         vcount = len(vtracks)
 
+        itracks = [t for t in data if t['track_type'] == 'Image']
+        self.image_tracks = itracks
+        icount = len(itracks)
+
         ttracks = [t for t in data if t['track_type'] == 'Text']
         self.text_tracks = ttracks
         tcount = len(ttracks)
 
-        if vcount > 0 and acount > 0:
+        if vcount > 0:
             self.dex_type = 'movie'
-        elif vcount > 0:
+        elif icount > 0:
             self.dex_type = 'image'
         elif acount == 1:
             self.dex_type = 'song'

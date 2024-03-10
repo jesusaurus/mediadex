@@ -1,9 +1,12 @@
 CHANGES
 =======
 
+0.3.1
+-----
+
 * Rely on file hash for uniqueness
 * Add --insecure parameter
-* Add release workflow
+* Add workflow for releasing to pypi
 
 0.3.0
 -----

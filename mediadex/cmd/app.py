@@ -71,7 +71,8 @@ class App:
         parser.add_argument('--opensearch-user-pass',
                             dest='userpass',
                             action='store', default='admin:admin',
-                            help='opensearch host to connect to')
+                            help='opensearch credentials in the form '
+                            'username:password, default: "admin:admin"')
 
         parser.add_argument('--insecure',
                             dest='insecure',
