@@ -71,11 +71,11 @@ class SongListFacet(FileListFacet):
 
 
 class Indexer:
-    def __init__(self):
+    def __init__(self, force=False):
         Movie.init()
         Song.init()
-        self.mi = MovieIndexer()
-        self.si = SongIndexer()
+        self.mi = MovieIndexer(force)
+        self.si = SongIndexer(force)
 
     def index(self, info):
         LOG.debug('Hashing file')

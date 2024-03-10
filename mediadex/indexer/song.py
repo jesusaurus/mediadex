@@ -30,8 +30,8 @@ LOG = logging.getLogger('mediadex.indexer.song')
 
 
 class SongIndexer:
-    def __init__(self):
-        pass
+    def __init__(self, force=False):
+        self.force = force
 
     def index(self, item, song=None):
         if song is None:
@@ -77,7 +77,7 @@ class SongIndexer:
         stream_counts.text_stream_count = 0
         song.stream_counts = stream_counts
 
-        if song.to_dict() != orig_dict:
+        if self.force or song.to_dict() != orig_dict:
             try:
                 song.save()
             except Exception as exc:

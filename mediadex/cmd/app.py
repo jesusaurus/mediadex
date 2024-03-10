@@ -85,6 +85,11 @@ class App:
                             help='write to stdout as yaml instead of '
                             'indexing into opensearch')
 
+        parser.add_argument('-F', '--force',
+                            dest='force',
+                            action='store_true',
+                            help='Force reprocessing of existing entries')
+
         self.args = parser.parse_args()
 
     def setup_logging(self, level):
@@ -186,7 +191,7 @@ class App:
               ssl_assert_hostname=secure,
             )
 
-            self.dex = Indexer()
+            self.dex = Indexer(self.args.force)
             if self.args.purge:
                 return self.purge()
 

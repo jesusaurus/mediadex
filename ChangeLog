@@ -1,6 +1,12 @@
 CHANGES
 =======
 
+0.3.2
+-----
+
+* Add --force flag
+* Improve IMDB matching
+
 0.3.1
 -----
 

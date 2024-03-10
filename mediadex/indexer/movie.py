@@ -28,11 +28,13 @@ LOG = logging.getLogger('mediadex.indexer.movie')
 
 
 class MovieIndexer:
-    def __init__(self):
+    def __init__(self, force=False):
         self.imdb = Cinemagoer()
+        self.force = force
 
     def index(self, item, existing=None):
         movie = Movie()
+        force = self.force
 
         # basic stream info
         stream_counts = StreamCounts()
@@ -42,8 +44,16 @@ class MovieIndexer:
         astreams = [x for x in item.astreams()]
 
         movie.video_streams = vstreams
+        if existing and movie.video_streams != existing.video_streams:
+            force = True
+
         movie.text_streams = tstreams
+        if existing and movie.text_streams != existing.text_streams:
+            force = True
+
         movie.audio_streams = astreams
+        if existing and movie.audio_streams != existing.audio_streams:
+            force = True
 
         stream_counts.video_stream_count = len(vstreams)
         LOG.debug("Processed {} video streams".format(len(vstreams)))
@@ -53,12 +63,15 @@ class MovieIndexer:
         LOG.debug("Processed {} audio streams".format(len(astreams)))
 
         movie.stream_counts = stream_counts
+        if existing and movie.stream_counts != existing.stream_counts:
+            force = True
+
         movie.dirname = item.dirname
         movie.filename = item.filename
         movie.filesize = item.general['file_size']
         movie.fingerprint = item.fingerprint
 
-        if existing:
+        if existing and not force:
             # Assume imdb hasn't changed anything
             movie.cast = existing.cast or None
             movie.director = existing.director or None
@@ -174,6 +187,10 @@ class MovieIndexer:
             if existing is None:
                 movie.save()
                 LOG.info("Movie added")
+            elif force:
+                existing.delete()
+                movie.save()
+                LOG.info("Movie update forced")
             elif existing.to_dict() == movie.to_dict():
                 LOG.debug("Movie unchanged")
             else:
